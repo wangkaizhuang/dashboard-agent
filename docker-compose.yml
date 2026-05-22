@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=mysql://root:123456789@db:3306/agent-explore
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-https://www.packyapi.com/v1}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-5.4-mini}
+      - CONTEXT_MAX_TOKENS=${CONTEXT_MAX_TOKENS:-128000}
+      - QUALITY_SCORE_THRESHOLD=${QUALITY_SCORE_THRESHOLD:-30}
+      - NEXT_PUBLIC_APP_URL=http://localhost:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456789
+      MYSQL_DATABASE: agent-explore
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p123456789"]
+      timeout: 20s
+      retries: 10
+      interval: 5s
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

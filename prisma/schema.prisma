@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Session {
+  id        String        @id @default(cuid())
+  title     String        @default("新对话")
+  mode      Mode          @default(QUICK)
+  status    SessionStatus @default(ACTIVE)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  messages  Message[]
+  steps     PipelineStep[]
+  template  Template?
+  expertQuestions ExpertQuestion[]
+}
+
+model Message {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String      @db.LongText
+  type      MessageType @default(TEXT)
+  metadata  Json?
+  createdAt DateTime    @default(now())
+  session   Session     @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model PipelineStep {
+  id        String     @id @default(cuid())
+  sessionId String
+  stepIndex Int
+  stepName  StepName
+  status    StepStatus @default(PENDING)
+  content   String     @db.LongText
+  score     Int?
+  reasoning String?    @db.LongText
+  issues    Json?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  session   Session    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model Template {
+  id          String   @id @default(cuid())
+  sessionId   String   @unique
+  htmlContent String   @db.LongText
+  score       Int
+  components  Json
+  createdAt   DateTime @default(now())
+  session     Session  @relation(fields: [sessionId], references: [id])
+}
+
+model ExpertQuestion {
+  id         String   @id @default(cuid())
+  sessionId  String
+  stepIndex  Int
+  question   String   @db.Text
+  options    Json
+  answer     String?
+  customText String?
+  answered   Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  session    Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+enum Mode {
+  QUICK
+  THINK
+  EXPERT
+}
+
+enum SessionStatus {
+  ACTIVE
+  PAUSED
+  COMPLETED
+  FAILED
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+enum MessageType {
+  TEXT
+  TEMPLATE_CARD
+  EXPERT_QUESTION
+  SCORE_REPORT
+}
+
+enum StepStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
+enum StepName {
+  REQUIREMENTS_ANALYSIS
+  THOUGHT_BREAKDOWN
+  LAYOUT_PLANNING
+  MOCK_DATA
+  TEMPLATE_GENERATION
+}

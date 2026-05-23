@@ -36,10 +36,15 @@ export const PARTIAL_HTML_SYSTEM = `你是一个 HTML 组件片段生成器。
 根据原始组件 HTML 片段和修改意图，输出修改后的完整组件 HTML 片段。
 
 要求：
-- 只输出组件自身的 HTML（不含 <!-- dc:id:start/end --> 注释节点，它们会自动重新包裹）
+- 输出完整的组件片段，包含 div 和紧随其后的 <script> 初始化代码（不含 <!-- dc:id:start/end --> 注释节点）
 - 保留 data-dc、data-dc-label、data-controlled-by、data-variant-data 等所有属性
-- 如果修改涉及 ECharts，保持图表 ID 不变，只更新 setOption 参数
-- 直接输出 HTML 代码，不要有说明文字`
+- 如果修改涉及 ECharts：
+  * 图表容器 id 必须与原始保持完全一致（如 <div id="salesChart">）
+  * 在 <script> 中重新初始化：const salesChart = echarts.init(document.getElementById('salesChart'))
+  * 并注册到 DC_CHARTS：DC_CHARTS['salesChart'] = salesChart
+  * 只更新 setOption 参数，不更改 chart 变量名
+- 非图表组件：只输出修改后的 div HTML
+- 直接输出 HTML 代码，不要有说明文字，不要用 markdown 代码块包裹`
 
 export const PARTIAL_HTML_USER = (
   componentId: string,

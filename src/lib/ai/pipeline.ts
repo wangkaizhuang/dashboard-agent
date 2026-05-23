@@ -200,7 +200,35 @@ export async function runPipeline(
     data: { status: 'COMPLETED', ...(sessionTitle ? { title: sessionTitle } : {}) }
   })
 
-  // F1: Generate 2-3 sentence AI summary before showing the template card
+  // ── Persist pipeline progress snapshot ───────────────────────────────────
+  // Fetch fresh step states (the in-memory cleanedSteps has stale status for
+  // steps completed during this run, since we update DB in the loop but not
+  // the local array).
+  const finalSteps = await prisma.pipelineStep.findMany({
+    where: { sessionId },
+    orderBy: { stepIndex: 'asc' }
+  })
+  await prisma.message.create({
+    data: {
+      sessionId,
+      role: 'ASSISTANT',
+      content: '',
+      type: 'TEXT',
+      metadata: {
+        pipelineProgress: true,
+        isPartialUpdate: false,
+        mode,
+        steps: finalSteps.map(s => ({
+          stepName: s.stepName,
+          status: s.status,
+          score: s.score ?? null,
+        })),
+        templateScore,
+      },
+    }
+  })
+
+  // ── F1: Generate and persist AI summary ───────────────────────────────────
   try {
     const reqJson = JSON.parse(previousOutputs['REQUIREMENTS_ANALYSIS'] || '{}')
     const reqSummary: string = reqJson.summary || reqJson.businessGoal || ''
@@ -216,12 +244,31 @@ export async function runPipeline(
       })
       const summaryText = summaryResp.choices[0]?.message?.content?.trim() || ''
       if (summaryText) {
+        // Persist to DB so it survives loadSession() calls
+        await prisma.message.create({
+          data: { sessionId, role: 'ASSISTANT', content: summaryText, type: 'TEXT' }
+        })
         send({ type: 'template_summary', summaryText })
       }
     }
   } catch { /* summary is best-effort, never fail the pipeline */ }
 
+  // Notify client to switch preview panel to the generated template
   send({ type: 'template_ready', templateId: template.id })
+
+  // ── Persist TEMPLATE_CARD ─────────────────────────────────────────────────
+  // Must be saved BEFORE pipeline_complete because that event triggers
+  // loadSession() which reads messages from DB.
+  await prisma.message.create({
+    data: {
+      sessionId,
+      role: 'ASSISTANT',
+      content: '',
+      type: 'TEMPLATE_CARD',
+      metadata: { templateId: template.id },
+    }
+  })
+
   send({ type: 'pipeline_complete' })
 }
 

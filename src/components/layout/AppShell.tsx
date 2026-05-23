@@ -17,6 +17,10 @@ export function AppShell({ sessionId }: { sessionId: string }) {
   const [rightView, setRightView] = useState<'progress' | 'preview'>('progress')
   const [configOpen, setConfigOpen] = useState(false)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
+  // Monotonically-incrementing counter — passed to TemplatePreview so it can
+  // force an iframe reload on each template_ready event, even when the templateId
+  // doesn't change (e.g. partial updates to the same session template).
+  const [previewVersion, setPreviewVersion] = useState(0)
 
   // Sidebar collapse — persisted in localStorage
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -124,6 +128,7 @@ export function AppShell({ sessionId }: { sessionId: string }) {
             sessionId={sessionId}
             onTemplateReady={(templateId) => {
               setPreviewTemplateId(templateId)
+              setPreviewVersion(v => v + 1)  // always increment to force iframe reload
               setRightView('preview')
             }}
             onSessionTitleChange={refreshSessions}
@@ -152,6 +157,7 @@ export function AppShell({ sessionId }: { sessionId: string }) {
           sessionId={sessionId}
           view={rightView}
           templateId={previewTemplateId}
+          previewVersion={previewVersion}
           onViewChange={setRightView}
           width={previewWidth}
           annotations={annotations}

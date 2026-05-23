@@ -184,6 +184,30 @@ export async function runPartialUpdate(
     data: { htmlContent: currentHtml },
   })
 
+  // Save partial-update progress to DB so it persists across loadSession() calls
+  await prisma.message.create({
+    data: {
+      sessionId,
+      role: 'ASSISTANT',
+      content: '',
+      type: 'TEXT',
+      metadata: {
+        pipelineProgress: true,
+        isPartialUpdate: true,
+        intent: intent.intent,
+        targetComponents: intent.targetComponents,
+        changeType: intent.changeType,
+        steps: [
+          { stepName: 'REQUIREMENTS_ANALYSIS', status: 'COMPLETED', score: null },
+          ...(intent.needsMockDataUpdate
+            ? [{ stepName: 'MOCK_DATA', status: 'COMPLETED', score: null }]
+            : []),
+          { stepName: 'TEMPLATE_GENERATION', status: 'COMPLETED', score: null },
+        ],
+      },
+    }
+  })
+
   send({ type: 'step_complete', stepIndex: 4 })
   send({ type: 'template_ready', templateId: template.id })
   send({ type: 'pipeline_complete' })

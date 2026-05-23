@@ -23,6 +23,8 @@ interface TemplatePreviewProps {
   onFullscreen?: () => void
   className?: string
   showToolbar?: boolean
+  /** Increment from outside to force the iframe to reload (e.g. after partial update) */
+  refreshTrigger?: number
   // Annotation state — controlled by parent (ProgressPanel) so it persists
   // across fullscreen toggles. Falls back to internal state if not provided.
   annotationMode?: boolean
@@ -37,6 +39,7 @@ export function TemplatePreview({
   onFullscreen,
   className = '',
   showToolbar = true,
+  refreshTrigger,
   annotationMode: annotationModeProp,
   onAnnotationModeChange,
   annotationsAdded = [],
@@ -45,6 +48,7 @@ export function TemplatePreview({
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [viewMode, setViewMode] = useState<'desktop' | 'mobile'>('desktop')
   const [refreshKey, setRefreshKey] = useState(0)
+  const prevRefreshTrigger = useRef(refreshTrigger)
   // Portal requires the DOM to exist — wait for mount
   const [mounted, setMounted] = useState(false)
 
@@ -68,6 +72,15 @@ export function TemplatePreview({
   const previewUrl = `/api/templates/${templateId}/preview`
 
   useEffect(() => { setMounted(true) }, [])
+
+  // When the parent signals a new template version (e.g. after partial update),
+  // force the iframe to reload by incrementing the key.
+  useEffect(() => {
+    if (refreshTrigger !== undefined && refreshTrigger !== prevRefreshTrigger.current) {
+      prevRefreshTrigger.current = refreshTrigger
+      setRefreshKey(k => k + 1)
+    }
+  }, [refreshTrigger])
 
   // ── Push annotation mode into the iframe via postMessage ──────────────────
   // Must fire both immediately (if iframe already loaded) and on iframe load

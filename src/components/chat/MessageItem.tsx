@@ -2,6 +2,8 @@
 import { TemplateCard } from './TemplateCard'
 import { ExpertQuestionCard } from './ExpertQuestionCard'
 import { ScoreReportCard } from './ScoreReportCard'
+import { PipelineProgressCard } from './PipelineProgressCard'
+import type { PipelineProgressMetadata } from './PipelineProgressCard'
 import type { Message, ExpertQuestion } from '@/types'
 
 interface MessageItemProps {
@@ -36,6 +38,15 @@ export function MessageItem({ message, onTemplatePreview, onExpertAnswered }: Me
           initialAnswered={meta.answered}
           initialAnswer={meta.answer ?? meta.customText ?? undefined}
         />
+      </div>
+    )
+  }
+
+  // Pipeline progress card — stored as TEXT with metadata.pipelineProgress = true
+  if (message.type === 'TEXT' && message.metadata?.pipelineProgress === true) {
+    return (
+      <div className="flex justify-start px-4 py-1">
+        <PipelineProgressCard metadata={message.metadata as unknown as PipelineProgressMetadata} />
       </div>
     )
   }

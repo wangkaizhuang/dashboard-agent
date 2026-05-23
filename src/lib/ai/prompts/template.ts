@@ -486,15 +486,41 @@ scatterChart.setOption({
 每个顶层组件 div 必须：
 1. 携带属性 data-dc="组件id" data-dc-label="组件标题"（id 来自布局规划的 id 字段）
 2. 被 <!-- dc:组件id:start --> 和 <!-- dc:组件id:end --> 注释节点包裹（单独占一行）
+3. 该组件的所有 HTML 和 <script> 初始化代码，都必须在这两个注释之间
 
-示例：
+⚠️ 绝对不能省略这些注释节点，它们用于后续的精确局部更新。
+⚠️ 图表的初始化 <script> 必须紧跟在组件 div 之后，并在 end 注释之前。
+
+非图表组件示例：
 <!-- dc:total-spaces:start -->
-<div class="col-3 card" data-dc="total-spaces" data-dc-label="总车位数">
-  ...内容...
+<div class="col-3 card metric-card" data-dc="total-spaces" data-dc-label="总车位数">
+  <div class="metric-header">
+    <span class="metric-label">总车位数</span>
+    <div class="metric-icon" style="background:#EEF2FF">🅿️</div>
+  </div>
+  <div class="metric-value">1,200</div>
+  <div class="metric-change up">↑ 5% vs 上月</div>
 </div>
 <!-- dc:total-spaces:end -->
 
-绝对不能省略这些注释节点，它们用于后续的精确局部更新。
+图表组件示例（脚本必须在注释内）：
+<!-- dc:sales-trend:start -->
+<div class="card col-8" data-dc="sales-trend" data-dc-label="销售趋势">
+  <div class="card-header"><div class="card-title">销售趋势</div></div>
+  <div id="salesTrendChart" style="height:260px;padding:8px"></div>
+</div>
+<script>
+const salesTrendChart = echarts.init(document.getElementById('salesTrendChart'));
+DC_CHARTS['salesTrendChart'] = salesTrendChart;
+salesTrendChart.setOption({
+  color: CHART_COLORS, tooltip: { ...TOOLTIP_STYLE, trigger:'axis' },
+  grid: { left:40, right:20, top:20, bottom:30 },
+  xAxis: { type:'category', data:['1月','2月','3月','4月','5月','6月'], ...AXIS_STYLE },
+  yAxis: { type:'value', ...AXIS_STYLE },
+  series: [{ type:'line', smooth:true, data:[820,932,901,934,1290,1330], lineStyle:{width:2.5} }]
+});
+</script>
+<!-- dc:sales-trend:end -->
 
 ## 联动组件规范
 

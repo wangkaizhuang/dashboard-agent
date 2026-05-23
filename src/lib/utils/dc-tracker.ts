@@ -22,49 +22,76 @@ export const DC_TRACKER_SCRIPT = `
     return s;
   }
 
+  // Apply a visible highlight ring to annotatable elements.
+  // We always style both [data-dc] AND .card so templates generated before
+  // the data-dc requirement was enforced still get visual feedback.
   function applyAnnotationStyle(on) {
     getStyle().textContent = on
-      ? '[data-dc]{cursor:pointer!important;transition:box-shadow .12s,outline .12s;}' +
-        '[data-dc]:hover{box-shadow:0 0 0 2px rgba(99,102,241,.45)!important;}'
+      ? '[data-dc],.card{cursor:pointer!important;transition:box-shadow .15s;}' +
+        '[data-dc]:hover,.card:hover{' +
+          'box-shadow:0 0 0 2px #6366f1,0 0 0 5px rgba(99,102,241,.18)!important;' +
+          'outline:none!important;}' +
+        '[data-dc]:hover *,.card:hover *{pointer-events:none;}'
       : '';
   }
 
-  function notify(type, el) {
-    var r = el.getBoundingClientRect();
-    window.parent.postMessage({
-      type: type,
-      componentId: el.dataset.dc,
-      componentLabel: el.dataset.dcLabel || el.dataset.dc,
-      bounds: { top: r.top, left: r.left, width: r.width, height: r.height }
-    }, '*');
-  }
-
+  // Attach mouseenter/mouseleave/click listeners to each annotatable element.
+  // Falls back to .card if no [data-dc] elements are present (old templates).
   function attachListeners() {
-    document.querySelectorAll('[data-dc]').forEach(function(el) {
+    var hasDc = !!document.querySelector('[data-dc]');
+    var elements = hasDc
+      ? document.querySelectorAll('[data-dc]')
+      : document.querySelectorAll('.card');
+
+    elements.forEach(function(el) {
       if (el._dcReady) return;
       el._dcReady = true;
+
+      // Derive id/label: prefer data-dc attributes, fall back to heuristics
+      var dcId = el.getAttribute('data-dc')
+        || el.id
+        || ('card-' + Math.floor(Math.random() * 99999));
+      var titleEl = el.querySelector('.card-title,.metric-label,.card-header');
+      var dcLabel = el.getAttribute('data-dc-label')
+        || (titleEl ? titleEl.textContent.trim() : null)
+        || dcId;
+
       el.addEventListener('mouseenter', function() {
-        if (active) notify('dc:hover', el);
+        if (!active) return;
+        var r = el.getBoundingClientRect();
+        window.parent.postMessage({
+          type: 'dc:hover',
+          componentId: dcId,
+          componentLabel: dcLabel,
+          bounds: { top: r.top, left: r.left, width: r.width, height: r.height }
+        }, '*');
       });
+
       el.addEventListener('mouseleave', function() {
         if (active) window.parent.postMessage({ type: 'dc:hover-end' }, '*');
       });
+
       el.addEventListener('click', function(e) {
-        if (active) {
-          e.stopPropagation();
-          notify('dc:click', el);
-        }
+        if (!active) return;
+        e.stopPropagation();
+        var r = el.getBoundingClientRect();
+        window.parent.postMessage({
+          type: 'dc:click',
+          componentId: dcId,
+          componentLabel: dcLabel,
+          bounds: { top: r.top, left: r.left, width: r.width, height: r.height }
+        }, '*');
       });
     });
   }
 
-  // Listen for annotation mode toggle and re-scan requests from the parent
+  // Listen for annotation mode toggle from the React parent
   window.addEventListener('message', function(e) {
     if (!e.data) return;
     if (e.data.type === 'dc:setAnnotationMode') {
       active = !!e.data.active;
       applyAnnotationStyle(active);
-      if (active) attachListeners(); // re-scan in case of lazy/async content
+      if (active) attachListeners(); // re-scan for any async/lazy content
     }
   });
 

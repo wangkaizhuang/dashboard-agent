@@ -12,6 +12,8 @@ interface ProgressPanelProps {
   sessionId: string
   view: 'progress' | 'preview'
   templateId: string | null
+  /** Incremented by AppShell on every template_ready to force iframe reload */
+  previewVersion?: number
   onViewChange: (view: 'progress' | 'preview') => void
   /** Width in pixels — controlled by the draggable divider in AppShell */
   width?: number
@@ -23,6 +25,7 @@ interface ProgressPanelProps {
 export function ProgressPanel({
   view,
   templateId,
+  previewVersion,
   onViewChange,
   width,
   annotations = [],
@@ -167,6 +170,7 @@ export function ProgressPanel({
               >
                 <TemplatePreview
                   templateId={templateId}
+                  refreshTrigger={previewVersion}
                   showToolbar={true}
                   onFullscreen={() => setIsFullscreen(true)}
                   annotationMode={annotationMode}
@@ -210,6 +214,7 @@ export function ProgressPanel({
             <div className="flex-1 overflow-hidden">
               <TemplatePreview
                 templateId={templateId}
+                refreshTrigger={previewVersion}
                 showToolbar={false}
                 annotationMode={annotationMode}
                 onAnnotationModeChange={setAnnotationMode}

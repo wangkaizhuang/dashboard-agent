@@ -48,13 +48,28 @@ export interface PipelineStep {
   updatedAt: string
 }
 
+/** Stored in Template.components JSON array */
+export interface ComponentRegistryItem {
+  id: string
+  label: string
+  type: string           // e.g. 'metric_card', 'line_chart'
+  controlledBy?: string  // component id of the controller, if any
+}
+
 export interface Template {
   id: string
   sessionId: string
   htmlContent: string
   score: number
-  components: string[]
+  components: ComponentRegistryItem[]
   createdAt: string
+}
+
+/** One annotation chip the user pinned on a component before sending */
+export interface Annotation {
+  componentId: string    // matches data-dc attribute in template HTML
+  componentLabel: string // human-readable name shown in chip
+  note: string           // user's text note, may be empty string
 }
 
 export interface ExpertQuestion {
@@ -78,6 +93,7 @@ export type SSEEventType =
   | 'step_complete'
   | 'step_failed'
   | 'expert_question'
+  | 'template_summary'    // AI summary text before template card
   | 'template_ready'
   | 'pipeline_complete'
   | 'pipeline_paused'
@@ -93,6 +109,7 @@ export interface SSEEvent {
   issues?: string[]
   question?: ExpertQuestion
   templateId?: string
+  summaryText?: string    // used by template_summary
   reason?: string
   message?: string
 }

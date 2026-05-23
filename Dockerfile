@@ -9,6 +9,10 @@ FROM base AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Dummy DATABASE_URL so Prisma client generates and next build succeeds
+# The real value is supplied at runtime via docker-compose / environment
+ENV DATABASE_URL="mysql://root:placeholder@localhost:3306/agent-explore"
+ENV OPENAI_API_KEY="build-placeholder"
 RUN npx prisma generate
 RUN npm run build
 

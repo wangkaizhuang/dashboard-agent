@@ -1,4 +1,4 @@
-import { openai, MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, getModel } from '@/lib/ai/client'
 import * as P from '@/lib/ai/prompts/requirements'
 import * as PB from '@/lib/ai/prompts/breakdown'
 import * as PL from '@/lib/ai/prompts/layout'
@@ -52,8 +52,8 @@ export async function runQuickStep(input: StepInput, send: SendFn): Promise<stri
 
   let fullContent = ''
 
-  const stream = await openai.chat.completions.create({
-    model: MODEL,
+  const stream = await getOpenAIClient().chat.completions.create({
+    model: getModel(),
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt }

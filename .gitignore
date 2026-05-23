@@ -39,3 +39,6 @@ prisma/migrations/dev.db
 
 # docker
 .dockerignore
+
+# runtime config overrides
+.runtime-config.json

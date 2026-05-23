@@ -1,18 +1,16 @@
 import OpenAI from 'openai'
+import { getRuntimeConfig } from '@/lib/config/runtime'
 
-const globalForOpenAI = globalThis as unknown as {
-  openai: OpenAI | undefined
+/** Creates a fresh OpenAI-compatible client using current runtime config */
+export function getOpenAIClient(): OpenAI {
+  const cfg = getRuntimeConfig()
+  return new OpenAI({
+    apiKey: cfg.apiKey || process.env.OPENAI_API_KEY || '',
+    baseURL: cfg.baseUrl,
+  })
 }
 
-export const openai =
-  globalForOpenAI.openai ??
-  new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY!,
-    baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
-  })
-
-if (process.env.NODE_ENV !== 'production') globalForOpenAI.openai = openai
-
-export const MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini'
-
-export default openai
+/** Returns current model name from runtime config */
+export function getModel(): string {
+  return getRuntimeConfig().model
+}

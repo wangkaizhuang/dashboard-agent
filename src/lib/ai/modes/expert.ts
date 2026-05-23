@@ -1,4 +1,4 @@
-import { openai, MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, getModel } from '@/lib/ai/client'
 import { prisma } from '@/lib/db/prisma'
 import * as EG from '@/lib/ai/prompts/expert-gap'
 import type { SSEEvent, StepName, ExpertQuestion } from '@/types'
@@ -8,8 +8,8 @@ type SendFn = (event: SSEEvent) => void
 export async function analyzeGaps(
   sessionId: string, stepIndex: number, stepName: StepName, userInput: string, history: string, send: SendFn
 ): Promise<boolean> {
-  const resp = await openai.chat.completions.create({
-    model: MODEL,
+  const resp = await getOpenAIClient().chat.completions.create({
+    model: getModel(),
     messages: [
       { role: 'system', content: EG.EXPERT_GAP_SYSTEM },
       { role: 'user', content: EG.EXPERT_GAP_USER(stepName, userInput, history) }

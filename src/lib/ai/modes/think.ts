@@ -1,4 +1,4 @@
-import { openai, MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, getModel } from '@/lib/ai/client'
 import type { SSEEvent, StepName } from '@/types'
 
 type SendFn = (event: SSEEvent) => void
@@ -17,8 +17,8 @@ export async function runThinkStep(
   let inThinking = false
   let rawBuffer = ''
 
-  const stream = await openai.chat.completions.create({
-    model: MODEL,
+  const stream = await getOpenAIClient().chat.completions.create({
+    model: getModel(),
     messages: [
       { role: 'system', content: thinkSystemPrompt },
       { role: 'user', content: userPrompt }

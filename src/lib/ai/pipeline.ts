@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db/prisma'
-import { openai, MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, getModel } from '@/lib/ai/client'
 import { buildCompressedContext } from './context'
 import { runQuickStep, buildStepPrompts } from './modes/quick'
 import { runThinkStep } from './modes/think'
@@ -71,8 +71,8 @@ export async function runPipeline(
         ;[content, reasoning] = await runThinkStep(i, stepName, systemPrompt, userPrompt, send)
       }
 
-      const scoreResp = await openai.chat.completions.create({
-        model: MODEL,
+      const scoreResp = await getOpenAIClient().chat.completions.create({
+        model: getModel(),
         messages: [
           { role: 'system', content: SCORING_SYSTEM },
           { role: 'user', content: SCORING_USER(stepName, userInput, content) }

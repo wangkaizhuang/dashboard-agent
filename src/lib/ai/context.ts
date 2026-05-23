@@ -1,4 +1,4 @@
-import { openai, MODEL } from '@/lib/ai/client'
+import { getOpenAIClient, getModel } from '@/lib/ai/client'
 import { estimateMessagesTokens } from '@/lib/utils/tokens'
 import type { Message } from '@/types'
 
@@ -28,8 +28,8 @@ export async function buildCompressedContext(
 
   // Summarize older messages
   try {
-    const summaryResp = await openai.chat.completions.create({
-      model: MODEL,
+    const summaryResp = await getOpenAIClient().chat.completions.create({
+      model: getModel(),
       messages: [
         {
           role: 'system',

@@ -1,12 +1,28 @@
 import { NextResponse } from 'next/server'
+import { getRuntimeConfig, setRuntimeConfig } from '@/lib/config/runtime'
+import type { RuntimeConfig } from '@/lib/config/runtime'
 
 export async function GET() {
-  // Return server-side config (from env vars)
-  // Client-side config overrides are handled in localStorage via UIStore
+  const cfg = getRuntimeConfig()
   return NextResponse.json({
-    model: process.env.OPENAI_MODEL || 'gpt-5.4-mini',
-    baseUrl: process.env.OPENAI_BASE_URL || 'https://www.packyapi.com/v1',
-    contextMaxTokens: parseInt(process.env.CONTEXT_MAX_TOKENS || '128000'),
-    qualityScoreThreshold: parseInt(process.env.QUALITY_SCORE_THRESHOLD || '30'),
+    model: cfg.model,
+    baseUrl: cfg.baseUrl,
+    // Never expose apiKey in GET — return masked version
+    apiKeyMasked: cfg.apiKey ? `${cfg.apiKey.slice(0, 8)}...${cfg.apiKey.slice(-4)}` : '',
+    contextMaxTokens: cfg.contextMaxTokens,
+    qualityScoreThreshold: cfg.qualityScoreThreshold,
   })
+}
+
+export async function POST(request: Request) {
+  const body = await request.json() as Partial<RuntimeConfig>
+  // Only update fields that are present and non-empty
+  const updates: Partial<RuntimeConfig> = {}
+  if (body.model) updates.model = body.model
+  if (body.baseUrl) updates.baseUrl = body.baseUrl
+  if (body.apiKey && body.apiKey !== '***masked***') updates.apiKey = body.apiKey
+  if (typeof body.contextMaxTokens === 'number') updates.contextMaxTokens = body.contextMaxTokens
+  if (typeof body.qualityScoreThreshold === 'number') updates.qualityScoreThreshold = body.qualityScoreThreshold
+  setRuntimeConfig(updates)
+  return NextResponse.json({ ok: true })
 }

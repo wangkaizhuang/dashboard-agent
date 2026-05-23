@@ -94,7 +94,7 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
                     : 'text-slate-300 hover:bg-slate-700 hover:text-white'
                 )}
               >
-                <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[session.status] || 'bg-slate-400')} />
+                <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', STATUS_DOT[session.status])} />
                 <span className="flex-1 truncate text-xs">{session.title}</span>
                 <button
                   onClick={e => handleDelete(e, session.id)}

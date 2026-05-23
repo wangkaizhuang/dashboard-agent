@@ -63,11 +63,12 @@ export async function runPipeline(
         }
       }
 
+      let reasoning = ''
       if (mode === 'QUICK' || mode === 'EXPERT') {
         content = await runQuickStep({ stepIndex: i, stepName, userInput, history, previousOutputs }, send)
       } else if (mode === 'THINK') {
         const { systemPrompt, userPrompt } = buildStepPrompts(stepName, userInput, history, previousOutputs)
-        content = await runThinkStep(i, stepName, systemPrompt, userPrompt, send)
+        ;[content, reasoning] = await runThinkStep(i, stepName, systemPrompt, userPrompt, send)
       }
 
       const scoreResp = await openai.chat.completions.create({
@@ -103,7 +104,7 @@ export async function runPipeline(
 
       await prisma.pipelineStep.update({
         where: { id: step.id },
-        data: { status: 'COMPLETED', content, score }
+        data: { status: 'COMPLETED', content, score, ...(reasoning ? { reasoning } : {}) }
       })
       previousOutputs[stepName] = content
       send({ type: 'step_complete', stepIndex: i })

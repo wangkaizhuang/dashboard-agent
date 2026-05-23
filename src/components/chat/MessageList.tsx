@@ -7,7 +7,6 @@ import type { Message } from '@/types'
 interface MessageListProps {
   messages: Message[]
   isLoading: boolean
-  sessionId: string
   onTemplatePreview: (templateId: string) => void
   onExpertAnswered: () => void
 }

@@ -48,12 +48,16 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
     initPipeline(sessionId)
     loadStepsFromDB(sessionId)
     loadSession()
-  }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionId, initPipeline, loadStepsFromDB, loadSession])
+
+  const stopLoading = () => {
+    setIsLoading(false)
+    setRunning(false)
+  }
 
   const sendMessage = async (content: string) => {
     if (isLoading) return
 
-    // Optimistic user message
     const tempId = `temp-${Date.now()}`
     const userMsg: Message = {
       id: tempId, sessionId, role: 'USER', content, type: 'TEXT',
@@ -119,36 +123,26 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
               onTemplateReady(event.templateId)
             }
             if (event.type === 'pipeline_complete') {
-              setIsLoading(false)
-              setRunning(false)
+              stopLoading()
               onSessionTitleChange()
               await loadSession()
             }
             if (event.type === 'pipeline_paused') {
-              setIsLoading(false)
-              setRunning(false)
+              stopLoading()
               await loadSession()
             }
-          } catch {
-            // Ignore parse errors for malformed SSE lines
-          }
+          } catch { /* ignore malformed SSE lines */ }
         }
       }
     } catch (err) {
       console.error('Pipeline error:', err)
-      setIsLoading(false)
-      setRunning(false)
+      stopLoading()
       await loadSession()
     }
   }
 
-  const handleTemplatePreview = (templateId: string) => {
-    onTemplateReady(templateId)
-  }
-
   return (
     <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ background: 'var(--color-bg)' }}>
-      {/* Chat header */}
       <div
         className="shrink-0 px-4 py-3 border-b flex items-center"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
@@ -162,8 +156,7 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
       <MessageList
         messages={messages}
         isLoading={isLoading}
-        sessionId={sessionId}
-        onTemplatePreview={handleTemplatePreview}
+        onTemplatePreview={onTemplateReady}
         onExpertAnswered={loadSession}
       />
 

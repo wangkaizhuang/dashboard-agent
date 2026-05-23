@@ -34,6 +34,8 @@ export function ExpertQuestionCard({ questionId, question, options, onAnswered }
         setDone(true)
         onAnswered()
         toast.success('回答已提交')
+      } else {
+        toast.error('提交失败，请重试')
       }
     } catch {
       toast.error('提交失败，请重试')

@@ -25,10 +25,8 @@ export function StepCard({ stepName, stepIndex, status, content, thinking, score
   const defaultExpanded = status === 'RUNNING' || status === 'FAILED'
   const isExpanded = manualExpanded !== null ? manualExpanded : defaultExpanded
 
-  // Reset manual override when status changes to RUNNING
   useEffect(() => {
-    if (status === 'RUNNING') setManualExpanded(null)
-    if (status === 'COMPLETED') setManualExpanded(null)
+    if (status === 'RUNNING' || status === 'COMPLETED') setManualExpanded(null)
   }, [status])
 
   const canExpand = status === 'COMPLETED' || status === 'FAILED'

@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Sidebar } from './Sidebar'
 import { ChatPanel } from './ChatPanel'
 import { ProgressPanel } from './ProgressPanel'
@@ -12,13 +12,11 @@ export function AppShell({ sessionId }: { sessionId: string }) {
   const [configOpen, setConfigOpen] = useState(false)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
 
-  useEffect(() => {
+  const refreshSessions = useCallback(() => {
     fetch('/api/sessions').then(r => r.json()).then(setSessions).catch(console.error)
   }, [])
 
-  const refreshSessions = () => {
-    fetch('/api/sessions').then(r => r.json()).then(setSessions).catch(console.error)
-  }
+  useEffect(() => { refreshSessions() }, [refreshSessions])
 
   return (
     <div className="flex h-screen overflow-hidden">

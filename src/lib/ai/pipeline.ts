@@ -5,8 +5,10 @@ import { runQuickStep, buildStepPrompts } from './modes/quick'
 import { runThinkStep } from './modes/think'
 import { analyzeGaps, waitForExpertAnswers } from './modes/expert'
 import { SCORING_SYSTEM, SCORING_USER } from './prompts/scoring'
+import { SUMMARY_SYSTEM, SUMMARY_USER } from './prompts/summary'
+import { runPartialUpdate } from './partial-update'
 import { getRuntimeConfig } from '@/lib/config/runtime'
-import type { SSEEvent, StepName, Mode } from '@/types'
+import type { SSEEvent, StepName, Mode, Annotation, ComponentRegistryItem } from '@/types'
 import { STEP_ORDER } from '@/types'
 
 type SendFn = (event: SSEEvent) => void
@@ -16,8 +18,24 @@ export async function runPipeline(
   userInput: string,
   mode: Mode,
   scoreThreshold: number,
-  send: SendFn
+  send: SendFn,
+  annotations: Annotation[] = [],
 ): Promise<void> {
+  // Route to partial update when annotations are present and a template already exists
+  if (annotations.length > 0) {
+    const existingTemplate = await prisma.template.findUnique({ where: { sessionId } })
+    if (existingTemplate) {
+      try {
+        await runPartialUpdate(sessionId, userInput, annotations, send)
+        return  // partial update succeeded
+      } catch (err) {
+        const msg = (err as Error).message
+        if (msg !== 'FULL_REGEN_REQUIRED') throw err  // unexpected error — propagate
+        // else: fall through to full 5-step pipeline below
+      }
+    }
+  }
+
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: { messages: { orderBy: { createdAt: 'asc' } }, steps: { orderBy: { stepIndex: 'asc' } } }
@@ -149,10 +167,27 @@ export async function runPipeline(
   const htmlContent = previousOutputs['TEMPLATE_GENERATION'] || ''
   const templateStep = cleanedSteps.find(s => s.stepName === 'TEMPLATE_GENERATION' && s.status === 'COMPLETED')
   const templateScore = typeof templateStep?.score === 'number' ? templateStep.score : 75
+
+  // Build component registry from layout planning output
+  let componentRegistry: ComponentRegistryItem[] = []
+  try {
+    const layoutParsed = JSON.parse(previousOutputs['LAYOUT_PLANNING'] || '{}')
+    const areas: Array<{ components?: Array<{ id?: string; title?: string; type?: string; controlledBy?: string }> }> = layoutParsed.areas || []
+    componentRegistry = areas
+      .flatMap(a => a.components || [])
+      .filter(c => c.id)
+      .map(c => ({
+        id: c.id!,
+        label: c.title || c.id!,
+        type: c.type || 'card',
+        ...(c.controlledBy ? { controlledBy: c.controlledBy } : {}),
+      }))
+  } catch { /* ignore */ }
+
   const template = await prisma.template.upsert({
     where: { sessionId },
-    create: { sessionId, htmlContent, score: templateScore, components: [] },
-    update: { htmlContent, score: templateScore }
+    create: { sessionId, htmlContent, score: templateScore, components: componentRegistry as never },
+    update: { htmlContent, score: templateScore, components: componentRegistry as never }
   })
 
   let sessionTitle: string | undefined
@@ -164,6 +199,27 @@ export async function runPipeline(
     where: { id: sessionId },
     data: { status: 'COMPLETED', ...(sessionTitle ? { title: sessionTitle } : {}) }
   })
+
+  // F1: Generate 2-3 sentence AI summary before showing the template card
+  try {
+    const reqJson = JSON.parse(previousOutputs['REQUIREMENTS_ANALYSIS'] || '{}')
+    const reqSummary: string = reqJson.summary || reqJson.businessGoal || ''
+    const componentLabels = componentRegistry.map(c => c.label).slice(0, 8)
+    if (reqSummary && componentLabels.length > 0) {
+      const summaryResp = await getOpenAIClient().chat.completions.create({
+        model: getModel(),
+        messages: [
+          { role: 'system', content: SUMMARY_SYSTEM },
+          { role: 'user', content: SUMMARY_USER(reqSummary, componentLabels, templateScore) },
+        ],
+        max_tokens: 200,
+      })
+      const summaryText = summaryResp.choices[0]?.message?.content?.trim() || ''
+      if (summaryText) {
+        send({ type: 'template_summary', summaryText })
+      }
+    }
+  } catch { /* summary is best-effort, never fail the pipeline */ }
 
   send({ type: 'template_ready', templateId: template.id })
   send({ type: 'pipeline_complete' })

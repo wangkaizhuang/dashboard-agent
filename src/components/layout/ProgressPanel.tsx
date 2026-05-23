@@ -1,19 +1,31 @@
 'use client'
 import { useState } from 'react'
-import { LayoutDashboard, ListChecks, Maximize2, X } from 'lucide-react'
+import { LayoutDashboard, ListChecks, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PipelineProgress } from '@/components/progress/PipelineProgress'
+import { TemplatePreview } from '@/components/template/TemplatePreview'
 import { usePipelineStore } from '@/store/pipeline'
 import { cn } from '@/lib/utils'
+import type { Annotation } from '@/types'
 
 interface ProgressPanelProps {
   sessionId: string
   view: 'progress' | 'preview'
   templateId: string | null
   onViewChange: (view: 'progress' | 'preview') => void
+  annotations?: Annotation[]
+  onAnnotationAdd?: (a: Annotation) => void
+  onAnnotationRemove?: (componentId: string) => void
 }
 
-export function ProgressPanel({ view, templateId, onViewChange }: ProgressPanelProps) {
+export function ProgressPanel({
+  view,
+  templateId,
+  onViewChange,
+  annotations = [],
+  onAnnotationAdd,
+  onAnnotationRemove,
+}: ProgressPanelProps) {
   const { isRunning, steps } = usePipelineStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -111,42 +123,26 @@ export function ProgressPanel({ view, templateId, onViewChange }: ProgressPanelP
                   <PipelineProgress />
                 )}
               </motion.div>
-            ) : (
+            ) : templateId ? (
               <motion.div
                 key="preview"
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 transition={{ duration: 0.15 }}
-                className="absolute inset-0 flex flex-col"
+                className="absolute inset-0"
               >
-                {/* Preview toolbar */}
-                <div className="shrink-0 flex items-center justify-end gap-1.5 px-2 py-1.5 border-b" style={{ borderColor: 'var(--color-border)' }}>
-                  <button
-                    onClick={() => window.open(`/api/templates/${templateId}/preview`, '_blank')}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
-                    title="新标签页打开"
-                  >
-                    <Maximize2 size={13} />
-                  </button>
-                  <button
-                    onClick={() => setIsFullscreen(true)}
-                    className="px-2.5 py-1 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors"
-                  >
-                    全屏
-                  </button>
-                </div>
-                {/* Iframe */}
-                <div className="flex-1 relative overflow-hidden">
-                  <iframe
-                    src={`/api/templates/${templateId}/preview`}
-                    className="w-full h-full border-0"
-                    sandbox="allow-scripts"
-                    title="Dashboard preview"
-                  />
-                </div>
+                <TemplatePreview
+                  templateId={templateId}
+                  showToolbar={true}
+                  onFullscreen={() => setIsFullscreen(true)}
+                  annotationsAdded={annotations}
+                  onAnnotationAdd={onAnnotationAdd}
+                  onAnnotationRemove={onAnnotationRemove}
+                  className="h-full rounded-none border-0"
+                />
               </motion.div>
-            )}
+            ) : null}
           </AnimatePresence>
         </div>
       </aside>
@@ -169,12 +165,16 @@ export function ProgressPanel({ view, templateId, onViewChange }: ProgressPanelP
                 <X size={14} /> 退出全屏
               </button>
             </div>
-            <iframe
-              src={`/api/templates/${templateId}/preview`}
-              className="flex-1 border-0"
-              sandbox="allow-scripts"
-              title="Dashboard fullscreen preview"
-            />
+            <div className="flex-1 overflow-hidden">
+              <TemplatePreview
+                templateId={templateId}
+                showToolbar={false}
+                annotationsAdded={annotations}
+                onAnnotationAdd={onAnnotationAdd}
+                onAnnotationRemove={onAnnotationRemove}
+                className="h-full rounded-none border-0"
+              />
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

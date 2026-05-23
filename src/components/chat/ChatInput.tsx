@@ -1,8 +1,8 @@
 'use client'
 import { useState, useRef, KeyboardEvent } from 'react'
-import { SendHorizonal, Loader2, Zap, Brain, GraduationCap } from 'lucide-react'
+import { SendHorizonal, Loader2, Zap, Brain, GraduationCap, X as XIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { Mode } from '@/types'
+import type { Mode, Annotation } from '@/types'
 
 interface ModeOption {
   label: string
@@ -42,6 +42,8 @@ interface ChatInputProps {
   placeholder?: string
   selectedMode: Mode
   onModeChange: (mode: Mode) => void
+  annotations?: Annotation[]
+  onAnnotationRemove?: (componentId: string) => void
 }
 
 export function ChatInput({
@@ -50,6 +52,8 @@ export function ChatInput({
   placeholder = '描述您想要的仪表板…',
   selectedMode,
   onModeChange,
+  annotations = [],
+  onAnnotationRemove,
 }: ChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -119,6 +123,30 @@ export function ChatInput({
           {disabled ? <Loader2 size={15} className="animate-spin" /> : <SendHorizonal size={15} />}
         </button>
       </div>
+
+      {/* Annotation chips — shown when at least one component is annotated */}
+      {annotations.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1.5 mb-0.5">
+          {annotations.map(ann => (
+            <div
+              key={ann.componentId}
+              className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border"
+              style={{ background: '#F3F0FF', borderColor: '#C4B5FD', color: '#6D28D9' }}
+            >
+              <span className="text-[10px]">🔲</span>
+              <span className="max-w-[120px] truncate">
+                {ann.componentLabel}{ann.note ? `：${ann.note}` : ''}
+              </span>
+              <button
+                onClick={() => onAnnotationRemove?.(ann.componentId)}
+                className="hover:text-red-500 transition-colors ml-0.5"
+              >
+                <XIcon size={10} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Mode selector + hint */}
       <div className="flex items-center gap-1 mt-2">

@@ -2,12 +2,12 @@ import { prisma } from '@/lib/db/prisma'
 import { createSSEStream } from '@/lib/utils/sse'
 import { runPipeline } from '@/lib/ai/pipeline'
 import { getRuntimeConfig } from '@/lib/config/runtime'
-import type { Mode } from '@/types'
+import type { Mode, Annotation } from '@/types'
 
 export const maxDuration = 300 // 5 minute timeout
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { content, mode: requestedMode } = await request.json()
+  const { content, mode: requestedMode, annotations } = await request.json()
   const sessionId = params.id
 
   // Load session to get stored mode
@@ -31,7 +31,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   return createSSEStream(async (send) => {
     try {
-      await runPipeline(sessionId, content, effectiveMode, scoreThreshold, send)
+      await runPipeline(sessionId, content, effectiveMode, scoreThreshold, send, (annotations ?? []) as Annotation[])
     } finally {
       // Only inject a SCORE_REPORT card if the pipeline paused due to quality failure.
       // Successful completion shows the TEMPLATE_CARD via loadSession() on the frontend.

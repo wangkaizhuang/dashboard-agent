@@ -4,13 +4,16 @@ import { useRouter } from 'next/navigation'
 import { usePipelineStore } from '@/store/pipeline'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
-import type { Message, SSEEvent, Mode } from '@/types'
+import type { Message, SSEEvent, Mode, Annotation } from '@/types'
 
 interface ChatPanelProps {
   sessionId: string
   onTemplateReady: (templateId: string) => void
   onSessionTitleChange: () => void
   onSessionCreated: () => void
+  annotations?: Annotation[]
+  onAnnotationRemove?: (componentId: string) => void
+  onAnnotationClear?: () => void
 }
 
 export function ChatPanel({
@@ -18,6 +21,9 @@ export function ChatPanel({
   onTemplateReady,
   onSessionTitleChange,
   onSessionCreated,
+  annotations = [],
+  onAnnotationRemove,
+  onAnnotationClear,
 }: ChatPanelProps) {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
@@ -154,8 +160,10 @@ export function ChatPanel({
       const response = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content, mode }),
+        body: JSON.stringify({ content, mode, annotations }),
       })
+      // Clear annotation chips immediately after send
+      onAnnotationClear?.()
 
       if (!response.ok || !response.body) throw new Error('Request failed')
 
@@ -213,6 +221,18 @@ export function ChatPanel({
               setMessages(prev => [...prev, eqMsg])
             }
 
+            if (event.type === 'template_summary' && event.summaryText) {
+              const summaryMsg: Message = {
+                id: `summary-${Date.now()}`,
+                sessionId,
+                role: 'ASSISTANT',
+                content: event.summaryText,
+                type: 'TEXT',
+                createdAt: new Date().toISOString(),
+              }
+              setMessages(prev => [...prev, summaryMsg])
+            }
+
             if (event.type === 'template_ready' && event.templateId) {
               onTemplateReady(event.templateId)
             }
@@ -265,6 +285,8 @@ export function ChatPanel({
         disabled={isLoading}
         selectedMode={selectedMode}
         onModeChange={setSelectedMode}
+        annotations={annotations}
+        onAnnotationRemove={onAnnotationRemove}
       />
     </div>
   )

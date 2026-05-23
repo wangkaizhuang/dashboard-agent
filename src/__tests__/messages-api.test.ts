@@ -98,7 +98,7 @@ describe('POST /api/sessions/[id]/messages — mode handling', () => {
     // Pipeline should be called with THINK mode
     const { runPipeline } = await import('@/lib/ai/pipeline')
     expect(runPipeline).toHaveBeenCalledWith(
-      'sess-1', 'hello', 'THINK', expect.any(Number), expect.any(Function)
+      'sess-1', 'hello', 'THINK', expect.any(Number), expect.any(Function), expect.any(Array)
     )
   })
 
@@ -111,7 +111,7 @@ describe('POST /api/sessions/[id]/messages — mode handling', () => {
 
     const { runPipeline } = await import('@/lib/ai/pipeline')
     expect(runPipeline).toHaveBeenCalledWith(
-      'sess-1', 'hello', 'EXPERT', expect.any(Number), expect.any(Function)
+      'sess-1', 'hello', 'EXPERT', expect.any(Number), expect.any(Function), expect.any(Array)
     )
   })
 
@@ -171,7 +171,7 @@ describe('POST /api/sessions/[id]/messages — mode handling', () => {
     const { runPipeline } = await import('@/lib/ai/pipeline')
     // getRuntimeConfig().qualityScoreThreshold = 30 in our mock
     expect(runPipeline).toHaveBeenCalledWith(
-      expect.any(String), expect.any(String), expect.any(String), 30, expect.any(Function)
+      expect.any(String), expect.any(String), expect.any(String), 30, expect.any(Function), expect.any(Array)
     )
   })
 })

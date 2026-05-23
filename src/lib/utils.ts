@@ -25,3 +25,15 @@ export function truncate(str: string, length: number): string {
 export function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
+
+export async function downloadTemplateHtml(templateId: string): Promise<void> {
+  const res = await fetch(`/api/templates/${templateId}/preview`)
+  const html = await res.text()
+  const blob = new Blob([html], { type: 'text/html' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `dashboard-${templateId.slice(0, 8)}.html`
+  a.click()
+  URL.revokeObjectURL(url)
+}

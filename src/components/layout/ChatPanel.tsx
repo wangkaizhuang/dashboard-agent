@@ -93,6 +93,28 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
             const event: SSEEvent = JSON.parse(data)
             handleSSEEvent(event)
 
+            if (event.type === 'expert_question' && event.question) {
+              // Inject expert question as a synthetic message in the chat
+              const q = event.question
+              const eqMsg: Message = {
+                id: `eq-${q.id}`,
+                sessionId,
+                role: 'ASSISTANT',
+                content: '',
+                type: 'EXPERT_QUESTION',
+                metadata: {
+                  id: q.id,
+                  sessionId: q.sessionId,
+                  stepIndex: q.stepIndex,
+                  question: q.question,
+                  options: q.options,
+                  answered: false,
+                  createdAt: q.createdAt,
+                },
+                createdAt: q.createdAt,
+              }
+              setMessages(prev => [...prev, eqMsg])
+            }
             if (event.type === 'template_ready' && event.templateId) {
               onTemplateReady(event.templateId)
             }

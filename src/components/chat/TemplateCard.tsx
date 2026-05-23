@@ -1,6 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { Eye, Maximize2, Download, LayoutDashboard } from 'lucide-react'
+import { ScoreBadge } from '@/components/progress/ScoreBadge'
+import { downloadTemplateHtml } from '@/lib/utils'
 
 interface TemplateCardProps {
   templateId: string
@@ -23,20 +25,7 @@ export function TemplateCard({ templateId, onPreview }: TemplateCardProps) {
       .catch(() => {})
   }, [templateId])
 
-  const handleDownload = async () => {
-    const res = await fetch(`/api/templates/${templateId}/preview`)
-    const html = await res.text()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `dashboard-${templateId.slice(0, 8)}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const score = info?.score ?? 85
-  const scoreColor = score >= 80 ? '#10B981' : score >= 60 ? '#F59E0B' : '#EF4444'
 
   return (
     <div
@@ -70,12 +59,7 @@ export function TemplateCard({ templateId, onPreview }: TemplateCardProps) {
               仪表板模板已生成
             </span>
           </div>
-          <span
-            className="text-xs font-bold px-2 py-0.5 rounded-full"
-            style={{ background: `${scoreColor}20`, color: scoreColor }}
-          >
-            {score}分
-          </span>
+          <ScoreBadge score={score} />
         </div>
 
         <div className="flex gap-2">
@@ -94,7 +78,7 @@ export function TemplateCard({ templateId, onPreview }: TemplateCardProps) {
             <Maximize2 size={12} />
           </button>
           <button
-            onClick={handleDownload}
+            onClick={() => downloadTemplateHtml(templateId)}
             className="flex items-center justify-center gap-1 py-1.5 px-2.5 rounded-lg text-xs border transition-colors hover:bg-gray-50"
             style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-2)' }}
           >

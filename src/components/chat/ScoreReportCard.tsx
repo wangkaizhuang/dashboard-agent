@@ -1,5 +1,6 @@
 'use client'
 import { AlertTriangle } from 'lucide-react'
+import { STEP_LABELS, type StepName } from '@/types'
 
 interface ScoreReportCardProps {
   stepName: string
@@ -9,10 +10,6 @@ interface ScoreReportCardProps {
 }
 
 export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreReportCardProps) {
-  const stepLabels: Record<string, string> = {
-    REQUIREMENTS_ANALYSIS: '需求分析', THOUGHT_BREAKDOWN: '思路拆解',
-    LAYOUT_PLANNING: '布局规划', MOCK_DATA: 'Mock 数据', TEMPLATE_GENERATION: '模板生成'
-  }
 
   return (
     <div className="rounded-xl border overflow-hidden max-w-sm" style={{ borderColor: '#FECACA', background: '#FFF5F5' }}>
@@ -28,7 +25,7 @@ export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreRep
             </span>
           </div>
           <p className="text-xs text-red-600 mb-2">
-            步骤「{stepLabels[stepName] || stepName}」评分低于阈值，请补充以下信息后继续：
+            步骤「{STEP_LABELS[stepName as StepName] || stepName}」评分低于阈值，请补充以下信息后继续：
           </p>
           {issues.length > 0 && (
             <ul className="text-xs text-red-700 space-y-1">

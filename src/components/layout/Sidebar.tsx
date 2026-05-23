@@ -2,7 +2,7 @@
 import { useRouter } from 'next/navigation'
 import { PlusIcon, Settings2Icon, Zap, Brain, GraduationCap, Trash2 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
-import type { Session, Mode } from '@/types'
+import type { Session, Mode, SessionStatus } from '@/types'
 
 interface SidebarProps {
   sessions: Session[]
@@ -39,7 +39,7 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
   }
 
   const groups = groupSessionsByDate(sessions)
-  const STATUS_DOT: Record<string, string> = {
+  const STATUS_DOT: Record<SessionStatus, string> = {
     ACTIVE: 'bg-emerald-400', PAUSED: 'bg-amber-400',
     FAILED: 'bg-red-400', COMPLETED: 'bg-slate-400'
   }

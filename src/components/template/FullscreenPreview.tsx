@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, ExternalLink, Download } from 'lucide-react'
+import { downloadTemplateHtml } from '@/lib/utils'
 
 interface FullscreenPreviewProps {
   templateId: string | null
@@ -23,18 +24,7 @@ export function FullscreenPreview({ templateId, onClose }: FullscreenPreviewProp
     }
   }, [templateId, onClose])
 
-  const handleDownload = async () => {
-    if (!templateId) return
-    const res = await fetch(`/api/templates/${templateId}/preview`)
-    const html = await res.text()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `dashboard-${templateId.slice(0, 8)}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const handleDownload = () => { if (templateId) downloadTemplateHtml(templateId) }
 
   return (
     <AnimatePresence>

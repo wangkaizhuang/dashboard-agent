@@ -7,7 +7,39 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
     include: { messages: { orderBy: { createdAt: 'asc' } }, steps: { orderBy: { stepIndex: 'asc' } }, template: true }
   })
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(session)
+
+  // Include unanswered expert questions as synthetic EXPERT_QUESTION messages
+  const expertQuestions = await prisma.expertQuestion.findMany({
+    where: { sessionId: params.id },
+    orderBy: { createdAt: 'asc' }
+  })
+
+  const expertMessages = expertQuestions.map(q => ({
+    id: `eq-${q.id}`,
+    sessionId: q.sessionId,
+    role: 'ASSISTANT' as const,
+    content: '',
+    type: 'EXPERT_QUESTION' as const,
+    metadata: {
+      id: q.id,
+      sessionId: q.sessionId,
+      stepIndex: q.stepIndex,
+      question: q.question,
+      options: q.options,
+      answered: q.answered,
+      answer: q.answer,
+      customText: q.customText,
+      createdAt: q.createdAt.toISOString(),
+    },
+    createdAt: q.createdAt.toISOString(),
+  }))
+
+  // Merge expert question messages into the message list (sorted by createdAt)
+  const allMessages = [...session.messages, ...expertMessages].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  )
+
+  return NextResponse.json({ ...session, messages: allMessages })
 }
 
 export async function DELETE(_: Request, { params }: { params: { id: string } }) {

@@ -19,7 +19,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
   const scoreThreshold = parseInt(process.env.QUALITY_SCORE_THRESHOLD || '30')
 
-  return createSSEStream(async (send, close) => {
+  return createSSEStream(async (send) => {
     try {
       await runPipeline(sessionId, content, session.mode, scoreThreshold, send)
     } finally {
@@ -33,7 +33,6 @@ export async function POST(request: Request, { params }: { params: { id: string 
           data: { sessionId, role: 'ASSISTANT', content: summary, type: 'TEXT' }
         })
       }
-      close()
     }
   })
 }

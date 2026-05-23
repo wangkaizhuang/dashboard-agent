@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef } from 'react'
 import { Maximize2, RefreshCw, ExternalLink, Download, Monitor, Smartphone } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { cn, downloadTemplateHtml } from '@/lib/utils'
 
 interface TemplatePreviewProps {
   templateId: string
@@ -24,17 +24,7 @@ export function TemplatePreview({
 
   const handleRefresh = () => setRefreshKey(k => k + 1)
 
-  const handleDownload = async () => {
-    const res = await fetch(previewUrl)
-    const html = await res.text()
-    const blob = new Blob([html], { type: 'text/html' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `dashboard-${templateId.slice(0, 8)}.html`
-    a.click()
-    URL.revokeObjectURL(url)
-  }
+  const handleDownload = () => downloadTemplateHtml(templateId)
 
   return (
     <div className={cn('flex flex-col h-full overflow-hidden rounded-xl border', className)} style={{ borderColor: 'var(--color-border)' }}>

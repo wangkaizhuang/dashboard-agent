@@ -479,7 +479,94 @@ scatterChart.setOption({
 9. 窗口 resize 时调用所有图表的 resize()：window.addEventListener('resize', ()=>{ allCharts.forEach(c=>c.resize()) })
 10. 页面要美观、专业，不要过度拥挤，留白适当
 11. 标题区要有仪表板名称、副标题、时间显示
-12. 可以添加 hover 效果、动态数字动画等让页面更生动`
+12. 可以添加 hover 效果、动态数字动画等让页面更生动
+
+## 组件标记规范（必须严格遵守）
+
+每个顶层组件 div 必须：
+1. 携带属性 data-dc="组件id" data-dc-label="组件标题"（id 来自布局规划的 id 字段）
+2. 被 <!-- dc:组件id:start --> 和 <!-- dc:组件id:end --> 注释节点包裹（单独占一行）
+
+示例：
+<!-- dc:total-spaces:start -->
+<div class="col-3 card" data-dc="total-spaces" data-dc-label="总车位数">
+  ...内容...
+</div>
+<!-- dc:total-spaces:end -->
+
+绝对不能省略这些注释节点，它们用于后续的精确局部更新。
+
+## 联动组件规范
+
+若布局规划中控制组件有 controls 和 variants 字段：
+1. 控制组件（date_filter/dropdown_filter）渲染为 segmented button group：
+<div class="dc-filter-group" data-controls="id1,id2" data-variants="day,week,month" data-current="day">
+  <button class="dc-filter-btn active" onclick="dcSwitch(this,'day')">按天</button>
+  <button class="dc-filter-btn" onclick="dcSwitch(this,'week')">按周</button>
+  <button class="dc-filter-btn" onclick="dcSwitch(this,'month')">按月</button>
+</div>
+2. 被控制的图表组件（有 controlledBy）：
+   - 添加属性 data-controlled-by="控制组件id"
+   - 添加属性 data-variant-data='{ "day":{...}, "week":{...}, "month":{...} }' （JSON 来自 Mock 数据）
+   - 添加 data-current-variant="day"（初始变体）
+   - 图表初始化时用 day 数据（或第一个变体的数据）
+3. 被控制的非图表组件（metric_card/table/list）：
+   - 添加 data-controlled-by + data-variant-data 属性
+   - 每份 variant 数据包含 value/labels/rows 等该组件所需字段
+
+## 联动 JS 和 Loading CSS（有联动时必须注入）
+
+在 </style> 前添加：
+.dc-filter-group { display:flex; gap:4px; padding:4px; background:#F1F5F9; border-radius:8px; }
+.dc-filter-btn { padding:6px 16px; border:none; border-radius:6px; font-size:13px; font-weight:500;
+  color:#64748B; background:transparent; cursor:pointer; transition:all .2s; }
+.dc-filter-btn.active { background:#fff; color:#4F46E5; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.dc-loading { position:relative; pointer-events:none; }
+.dc-loading::after { content:''; position:absolute; inset:0; border-radius:var(--radius,12px);
+  background:rgba(255,255,255,0.78); animation:dc-pulse .5s ease-in-out forwards; }
+@keyframes dc-pulse { 0%{opacity:0} 40%{opacity:1} 100%{opacity:.85} }
+
+在页面 JS 末尾（window.addEventListener('resize',...) 之前）添加：
+// DC Linkage Engine
+const DC_CHARTS = {}
+function dcSwitch(btn, variant) {
+  const group = btn.closest('[data-controls]')
+  if (!group) return
+  group.querySelectorAll('.dc-filter-btn').forEach(b => b.classList.remove('active'))
+  btn.classList.add('active')
+  const controlIds = group.dataset.controls.split(',').map(s => s.trim())
+  controlIds.forEach(ctrlId => {
+    const el = document.querySelector('[data-controlled-by="' + ctrlId + '"]') ||
+               document.getElementById(ctrlId)
+    if (!el) return
+    el.classList.add('dc-loading')
+    setTimeout(() => {
+      el.classList.remove('dc-loading')
+      try {
+        const allData = JSON.parse(el.dataset.variantData || '{}')
+        const vd = allData[variant]
+        if (!vd) return
+        const chartEl = el.querySelector('[id]')
+        if (chartEl && DC_CHARTS[chartEl.id]) {
+          const opt = {}
+          if (vd.labels) opt.xAxis = { data: vd.labels }
+          if (vd.values) opt.series = [{ data: vd.values }]
+          DC_CHARTS[chartEl.id].setOption(opt)
+        } else if (vd.value !== undefined) {
+          const valEl = el.querySelector('.metric-value')
+          if (valEl) valEl.textContent = vd.value
+          const trendEl = el.querySelector('.metric-change')
+          if (trendEl && vd.trend) trendEl.textContent = vd.trend
+        }
+      } catch(e) { console.warn('dcSwitch error', e) }
+    }, 500)
+  })
+}
+
+ECharts 初始化时必须同时注册到 DC_CHARTS（示例）：
+const myChart = echarts.init(document.getElementById('hourlyFlow'))
+DC_CHARTS['hourlyFlow'] = myChart
+myChart.setOption({...})`
 
 export const TEMPLATE_USER = (requirements: string, layout: string, mockData: string) => `
 需求分析：

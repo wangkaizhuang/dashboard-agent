@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { LayoutDashboard, ListChecks, X } from 'lucide-react'
+import { LayoutDashboard, ListChecks, X, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PipelineProgress } from '@/components/progress/PipelineProgress'
 import { TemplatePreview } from '@/components/template/TemplatePreview'
@@ -13,6 +13,8 @@ interface ProgressPanelProps {
   view: 'progress' | 'preview'
   templateId: string | null
   onViewChange: (view: 'progress' | 'preview') => void
+  /** Width in pixels — controlled by the draggable divider in AppShell */
+  width?: number
   annotations?: Annotation[]
   onAnnotationAdd?: (a: Annotation) => void
   onAnnotationRemove?: (componentId: string) => void
@@ -22,6 +24,7 @@ export function ProgressPanel({
   view,
   templateId,
   onViewChange,
+  width,
   annotations = [],
   onAnnotationAdd,
   onAnnotationRemove,
@@ -29,18 +32,45 @@ export function ProgressPanel({
   const { isRunning, steps } = usePipelineStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
 
+  // Lifted here so both the normal and fullscreen TemplatePreview share the same mode.
+  // Entering fullscreen therefore keeps annotation mode active seamlessly.
+  const [annotationMode, setAnnotationMode] = useState(false)
+
   const completedSteps = steps.filter(s => s.status === 'COMPLETED').length
   const totalSteps = steps.length
+
+  /** Reusable annotation toggle button — compact (icon-only) or full (icon + label) */
+  const AnnotationToggle = ({ compact = false }: { compact?: boolean }) => (
+    <button
+      onClick={() => setAnnotationMode(m => !m)}
+      className={cn(
+        'flex items-center gap-1 rounded-lg text-xs font-medium transition-colors',
+        compact ? 'px-2 py-1' : 'px-2.5 py-1.5',
+        annotationMode
+          ? 'bg-indigo-100 text-indigo-700'
+          : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+      )}
+      title={annotationMode ? '退出注释模式' : '悬停组件添加注释'}
+    >
+      <Pencil size={11} />
+      {!compact && <span>{annotationMode ? '退出注释' : '注释'}</span>}
+      {annotations.length > 0 && (
+        <span className="ml-0.5 px-1 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] leading-none">
+          {annotations.length}
+        </span>
+      )}
+    </button>
+  )
 
   return (
     <>
       <aside
         className="hidden xl:flex flex-col h-full overflow-hidden"
         style={{
-          width: '380px',
-          minWidth: '380px',
+          width: width ? `${width}px` : '380px',
+          minWidth: '320px',
           background: 'var(--color-surface)',
-          borderLeft: '1px solid var(--color-border)'
+          borderLeft: '1px solid var(--color-border)',
         }}
       >
         {/* Header */}
@@ -48,7 +78,7 @@ export function ProgressPanel({
           className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b"
           style={{ borderColor: 'var(--color-border)' }}
         >
-          {/* Progress indicator */}
+          {/* Progress indicator / title */}
           <div className="flex-1 min-w-0">
             {isRunning ? (
               <div className="flex items-center gap-2">
@@ -74,6 +104,9 @@ export function ProgressPanel({
               </span>
             )}
           </div>
+
+          {/* Annotation toggle — only meaningful when preview is visible */}
+          {templateId && view === 'preview' && <AnnotationToggle compact />}
 
           {/* View toggle */}
           {templateId && (
@@ -136,6 +169,8 @@ export function ProgressPanel({
                   templateId={templateId}
                   showToolbar={true}
                   onFullscreen={() => setIsFullscreen(true)}
+                  annotationMode={annotationMode}
+                  onAnnotationModeChange={setAnnotationMode}
                   annotationsAdded={annotations}
                   onAnnotationAdd={onAnnotationAdd}
                   onAnnotationRemove={onAnnotationRemove}
@@ -147,28 +182,37 @@ export function ProgressPanel({
         </div>
       </aside>
 
-      {/* Fullscreen overlay */}
+      {/* Fullscreen overlay — shares the same annotationMode state */}
       <AnimatePresence>
         {isFullscreen && templateId && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             className="fixed inset-0 z-50 bg-white flex flex-col"
           >
-            <div className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-white" style={{ borderColor: 'var(--color-border)' }}>
+            <div
+              className="shrink-0 flex items-center justify-between px-4 py-2 border-b bg-white"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
               <span className="text-sm font-semibold text-slate-700">仪表板预览（全屏）</span>
-              <button
-                onClick={() => setIsFullscreen(false)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <X size={14} /> 退出全屏
-              </button>
+              <div className="flex items-center gap-2">
+                <AnnotationToggle />
+                <button
+                  onClick={() => setIsFullscreen(false)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={14} /> 退出全屏
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-hidden">
               <TemplatePreview
                 templateId={templateId}
                 showToolbar={false}
+                annotationMode={annotationMode}
+                onAnnotationModeChange={setAnnotationMode}
                 annotationsAdded={annotations}
                 onAnnotationAdd={onAnnotationAdd}
                 onAnnotationRemove={onAnnotationRemove}

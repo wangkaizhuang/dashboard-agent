@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlusIcon, Settings2Icon, Trash2, Check, X } from 'lucide-react'
+import { PlusIcon, Settings2Icon, Trash2, Check, X, ChevronLeft, ChevronRight } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import type { Session, SessionStatus } from '@/types'
 
@@ -10,9 +10,18 @@ interface SidebarProps {
   currentSessionId: string
   onConfigOpen: () => void
   onSessionsChange: () => void
+  collapsed: boolean
+  onToggleCollapse: () => void
 }
 
-export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsChange }: SidebarProps) {
+export function Sidebar({
+  sessions,
+  currentSessionId,
+  onConfigOpen,
+  onSessionsChange,
+  collapsed,
+  onToggleCollapse,
+}: SidebarProps) {
   const router = useRouter()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
   const confirmRef = useRef<HTMLDivElement>(null)
@@ -30,8 +39,7 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
   }, [pendingDeleteId])
 
   const handleNewChat = () => {
-    // Navigate to /chat/new (draft state — no DB session created yet)
-    if (currentSessionId === 'new') return // already on draft
+    if (currentSessionId === 'new') return
     router.push('/chat/new')
   }
 
@@ -46,13 +54,8 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
     await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
     onSessionsChange()
     if (id === currentSessionId) {
-      // Navigate to the most recent remaining session, or draft if none left
       const remaining = sessions.filter(s => s.id !== id)
-      if (remaining.length > 0) {
-        router.push(`/chat/${remaining[0].id}`)
-      } else {
-        router.push('/chat/new')
-      }
+      router.push(remaining.length > 0 ? `/chat/${remaining[0].id}` : '/chat/new')
     }
   }
 
@@ -75,21 +78,92 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
     COMPLETED: 'bg-slate-400',
   }
 
+  // ── Collapsed sidebar — icon-only strip ───────────────────────────────────
+  if (collapsed) {
+    return (
+      <aside
+        className="flex flex-col h-full shrink-0 overflow-hidden"
+        style={{
+          width: '48px',
+          background: '#1E293B',
+          borderRight: '1px solid #334155',
+          transition: 'width 200ms ease',
+        }}
+      >
+        {/* Logo — click to expand */}
+        <div className="flex flex-col items-center pt-4 pb-2 gap-2 px-2">
+          <button
+            onClick={onToggleCollapse}
+            className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs font-bold hover:bg-indigo-400 transition-colors"
+            title="展开侧边栏"
+          >
+            D
+          </button>
+          <button
+            onClick={handleNewChat}
+            className={cn(
+              'w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
+              currentSessionId === 'new'
+                ? 'bg-indigo-700 text-white'
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            )}
+            title="新对话"
+          >
+            <PlusIcon size={14} />
+          </button>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Bottom icons */}
+        <div className="flex flex-col items-center gap-2 px-2 py-3 border-t border-slate-700">
+          <button
+            onClick={onConfigOpen}
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+            title="系统配置"
+          >
+            <Settings2Icon size={14} />
+          </button>
+          <button
+            onClick={onToggleCollapse}
+            className="w-8 h-8 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 flex items-center justify-center transition-colors"
+            title="展开侧边栏"
+          >
+            <ChevronRight size={14} />
+          </button>
+        </div>
+      </aside>
+    )
+  }
+
+  // ── Expanded sidebar ──────────────────────────────────────────────────────
   return (
     <aside
-      className="flex flex-col h-full w-60 shrink-0 overflow-hidden"
-      style={{ background: '#1E293B', borderRight: '1px solid #334155' }}
+      className="flex flex-col h-full shrink-0 overflow-hidden"
+      style={{
+        width: '240px',
+        background: '#1E293B',
+        borderRight: '1px solid #334155',
+        transition: 'width 200ms ease',
+      }}
     >
       {/* Header */}
       <div className="px-4 pt-5 pb-3">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs font-bold">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">
             D
           </div>
-          <span className="text-white font-semibold text-sm">Dashboard Agent</span>
+          <span className="text-white font-semibold text-sm flex-1 truncate">Dashboard Agent</span>
+          {/* Collapse toggle */}
+          <button
+            onClick={onToggleCollapse}
+            className="p-1 rounded text-slate-500 hover:text-slate-300 hover:bg-slate-700 transition-colors shrink-0"
+            title="收起侧边栏"
+          >
+            <ChevronLeft size={14} />
+          </button>
         </div>
 
-        {/* New chat button — navigates to draft without creating a DB session */}
         <button
           onClick={handleNewChat}
           className={cn(

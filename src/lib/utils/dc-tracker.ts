@@ -3,29 +3,79 @@
  * Runs inside the sandboxed iframe (sandbox="allow-scripts").
  * Uses window.parent.postMessage to notify the React parent about
  * hover/click events on annotated components (data-dc attribute).
+ *
+ * The tracker is INACTIVE until the parent sends dc:setAnnotationMode {active:true}.
+ * This lets the parent toggle annotation mode without reloading the iframe.
  */
 export const DC_TRACKER_SCRIPT = `
 <script id="dc-tracker">
 (function(){
+  var active = false;
+
+  function getStyle() {
+    var s = document.getElementById('_dc_style');
+    if (!s) {
+      s = document.createElement('style');
+      s.id = '_dc_style';
+      document.head.appendChild(s);
+    }
+    return s;
+  }
+
+  function applyAnnotationStyle(on) {
+    getStyle().textContent = on
+      ? '[data-dc]{cursor:pointer!important;transition:box-shadow .12s,outline .12s;}' +
+        '[data-dc]:hover{box-shadow:0 0 0 2px rgba(99,102,241,.45)!important;}'
+      : '';
+  }
+
   function notify(type, el) {
-    var r = el.getBoundingClientRect()
+    var r = el.getBoundingClientRect();
     window.parent.postMessage({
       type: type,
       componentId: el.dataset.dc,
       componentLabel: el.dataset.dcLabel || el.dataset.dc,
       bounds: { top: r.top, left: r.left, width: r.width, height: r.height }
-    }, '*')
+    }, '*');
   }
-  document.querySelectorAll('[data-dc]').forEach(function(el) {
-    el.addEventListener('mouseenter', function() { notify('dc:hover', el) })
-    el.addEventListener('mouseleave', function() {
-      window.parent.postMessage({ type: 'dc:hover-end' }, '*')
-    })
-    el.addEventListener('click', function(e) {
-      e.stopPropagation()
-      notify('dc:click', el)
-    })
-  })
+
+  function attachListeners() {
+    document.querySelectorAll('[data-dc]').forEach(function(el) {
+      if (el._dcReady) return;
+      el._dcReady = true;
+      el.addEventListener('mouseenter', function() {
+        if (active) notify('dc:hover', el);
+      });
+      el.addEventListener('mouseleave', function() {
+        if (active) window.parent.postMessage({ type: 'dc:hover-end' }, '*');
+      });
+      el.addEventListener('click', function(e) {
+        if (active) {
+          e.stopPropagation();
+          notify('dc:click', el);
+        }
+      });
+    });
+  }
+
+  // Listen for annotation mode toggle and re-scan requests from the parent
+  window.addEventListener('message', function(e) {
+    if (!e.data) return;
+    if (e.data.type === 'dc:setAnnotationMode') {
+      active = !!e.data.active;
+      applyAnnotationStyle(active);
+      if (active) attachListeners(); // re-scan in case of lazy/async content
+    }
+  });
+
+  // Initial scan — run now AND after delays for async chart renders
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', attachListeners);
+  } else {
+    attachListeners();
+  }
+  setTimeout(attachListeners, 600);
+  setTimeout(attachListeners, 2500);
 })()
 <\/script>
 `

@@ -53,6 +53,8 @@ const defaultProps = {
   currentSessionId: 'sess-1',
   onConfigOpen: vi.fn(),
   onSessionsChange: vi.fn(),
+  collapsed: false,
+  onToggleCollapse: vi.fn(),
 }
 
 beforeEach(() => {

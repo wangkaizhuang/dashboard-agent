@@ -2,23 +2,35 @@ export const MOCKDATA_SYSTEM = `你是一个数据 Mock 专家。
 根据布局规划，为每个组件生成真实感的示例数据。
 
 要求：
+- 必须为布局规划中提到的每一个 dataKey 都生成数据，不能遗漏任何字段
 - 数据要有业务意义，符合真实场景
 - 数字要合理（不要出现 0 或极端值）
-- 时序数据要有合理的波动趋势
+- 时序数据要包含足够的时间点（至少12个月或足够覆盖 day/week/month 三个粒度）
+- 多维度数据（部门/岗位/地域等）要覆盖全部维度
 - 中文标签要准确
-- 输出纯 JSON，key 与布局中的 dataKey 对应
+- 输出纯 JSON，不要有任何解释文字，key 与布局中的 dataKey 严格对应
 
-输出格式：
+输出格式示例：
 {
-  "dataKey1": { "value": ..., "trend": "+12.5%" },
-  "dataKey2": { "labels": [...], "values": [...] },
-  ...
+  "kpi_revenue": { "value": 1234567, "unit": "元", "trend": "+12.5%", "trendLabel": "较上月" },
+  "chart_monthly_sales": {
+    "labels": ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"],
+    "values": [820000, 932000, 901000, 934000, 1290000, 1330000, 1320000, 1200000, 1100000, 980000, 1050000, 1234567],
+    "byDept": {
+      "研发部": [120000,130000,...],
+      "销售部": [200000,210000,...]
+    }
+  },
+  "table_top_products": {
+    "columns": ["产品","销量","占比"],
+    "rows": [["产品A", 5432, "32%"], ["产品B", 3210, "19%"]]
+  }
 }`
 
 export const MOCKDATA_USER = (layout: string, requirements: string) => `
-需求概述：${requirements}
+需求概述：${requirements.slice(0, 1000)}
 
-布局规划：
-${layout}
+布局规划（包含所有 dataKey，必须全部覆盖）：
+${layout.slice(0, 4000)}
 
-请为每个组件生成 Mock 数据，输出 JSON。`
+请为布局规划中的每个 dataKey 生成 Mock 数据，输出纯 JSON，不要遗漏任何字段。`

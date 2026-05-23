@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db/prisma'
 import { createSSEStream } from '@/lib/utils/sse'
 import { runPipeline } from '@/lib/ai/pipeline'
+import { getRuntimeConfig } from '@/lib/config/runtime'
 
 export const maxDuration = 300 // 5 minute timeout
 
@@ -17,21 +18,37 @@ export async function POST(request: Request, { params }: { params: { id: string 
     data: { sessionId, role: 'USER', content, type: 'TEXT' }
   })
 
-  const scoreThreshold = parseInt(process.env.QUALITY_SCORE_THRESHOLD || '30')
+  const scoreThreshold = getRuntimeConfig().qualityScoreThreshold
 
   return createSSEStream(async (send) => {
     try {
       await runPipeline(sessionId, content, session.mode, scoreThreshold, send)
     } finally {
-      // Save assistant summary message
-      const steps = await prisma.pipelineStep.findMany({
-        where: { sessionId }, orderBy: { stepIndex: 'asc' }
-      })
-      const summary = steps.map(s => `[${s.stepName}] ${s.content.slice(0, 200)}`).join('\n')
-      if (summary) {
-        await prisma.message.create({
-          data: { sessionId, role: 'ASSISTANT', content: summary, type: 'TEXT' }
+      // Only show a SCORE_REPORT card if the pipeline was paused due to quality failure.
+      // For successful completion, the TEMPLATE_CARD is injected by the frontend via loadSession().
+      const finalSession = await prisma.session.findUnique({ where: { id: sessionId } })
+      if (finalSession?.status === 'PAUSED') {
+        const failedStep = await prisma.pipelineStep.findFirst({
+          where: { sessionId, status: 'FAILED' },
+          orderBy: { stepIndex: 'asc' }
         })
+        if (failedStep) {
+          const issuesArr = Array.isArray(failedStep.issues) ? (failedStep.issues as string[]) : []
+          await prisma.message.create({
+            data: {
+              sessionId,
+              role: 'ASSISTANT',
+              content: '',
+              type: 'SCORE_REPORT',
+              metadata: {
+                stepName: failedStep.stepName,
+                score: failedStep.score ?? 0,
+                issues: issuesArr,
+                threshold: scoreThreshold,
+              }
+            }
+          })
+        }
       }
     }
   })

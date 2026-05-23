@@ -10,13 +10,15 @@ interface ExpertQuestionCardProps {
   question: string
   options: Option[]
   onAnswered: () => void
+  initialAnswered?: boolean
+  initialAnswer?: string
 }
 
-export function ExpertQuestionCard({ questionId, question, options, onAnswered }: ExpertQuestionCardProps) {
-  const [selected, setSelected] = useState<string | null>(null)
+export function ExpertQuestionCard({ questionId, question, options, onAnswered, initialAnswered, initialAnswer }: ExpertQuestionCardProps) {
+  const [selected, setSelected] = useState<string | null>(initialAnswer ?? null)
   const [customText, setCustomText] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const [done, setDone] = useState(false)
+  const [done, setDone] = useState(initialAnswered ?? false)
 
   const handleSubmit = async () => {
     if (!selected) return

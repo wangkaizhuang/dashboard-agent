@@ -33,6 +33,8 @@ export function MessageItem({ message, onTemplatePreview, onExpertAnswered }: Me
           question={meta.question}
           options={meta.options as { label: string; value: string }[]}
           onAnswered={onExpertAnswered}
+          initialAnswered={meta.answered}
+          initialAnswer={meta.answer ?? meta.customText ?? undefined}
         />
       </div>
     )

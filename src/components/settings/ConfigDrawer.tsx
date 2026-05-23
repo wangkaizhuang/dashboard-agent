@@ -19,6 +19,7 @@ const PRESET_MODELS = [
   // DeepSeek
   { id: 'deepseek-chat', label: 'DeepSeek V3', provider: 'DeepSeek', tag: '开源', tagColor: 'bg-emerald-100 text-emerald-700' },
   { id: 'deepseek-reasoner', label: 'DeepSeek R1', provider: 'DeepSeek', tag: '推理', tagColor: 'bg-teal-100 text-teal-700' },
+  { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', provider: 'DeepSeek', tag: '极速', tagColor: 'bg-cyan-100 text-cyan-700' },
   // Gemini
   { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', provider: 'Google', tag: '极速', tagColor: 'bg-red-100 text-red-700' },
   { id: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro', provider: 'Google', tag: '长文', tagColor: 'bg-pink-100 text-pink-700' },

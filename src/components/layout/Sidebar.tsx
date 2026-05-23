@@ -1,6 +1,7 @@
 'use client'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { PlusIcon, Settings2Icon, Zap, Brain, GraduationCap, Trash2 } from 'lucide-react'
+import { PlusIcon, Settings2Icon, Zap, Brain, GraduationCap, Trash2, Loader2 } from 'lucide-react'
 import { cn, formatDate } from '@/lib/utils'
 import type { Session, Mode, SessionStatus } from '@/types'
 
@@ -19,6 +20,7 @@ const MODE_CONFIG = {
 
 export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsChange }: SidebarProps) {
   const router = useRouter()
+  const [creating, setCreating] = useState(false)
 
   const groupSessionsByDate = (sessions: Session[]) => {
     const groups: Record<string, Session[]> = {}
@@ -30,12 +32,29 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
     return groups
   }
 
+  const createSession = async (mode: Mode = 'QUICK') => {
+    if (creating) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode })
+      })
+      const session = await res.json()
+      onSessionsChange()
+      router.push(`/chat/${session.id}`)
+    } finally {
+      setCreating(false)
+    }
+  }
+
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault()
     e.stopPropagation()
     await fetch(`/api/sessions/${id}`, { method: 'DELETE' })
     onSessionsChange()
-    if (id === currentSessionId) router.push('/chat/new')
+    if (id === currentSessionId) await createSession()
   }
 
   const groups = groupSessionsByDate(sessions)
@@ -58,8 +77,9 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
           {(Object.entries(MODE_CONFIG) as [Mode, typeof MODE_CONFIG.QUICK][]).map(([mode, cfg]) => (
             <button
               key={mode}
-              onClick={() => router.push(`/chat/new?mode=${mode}`)}
-              className={cn('flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors', 'text-slate-400 hover:text-white hover:bg-slate-700')}
+              onClick={() => createSession(mode)}
+              disabled={creating}
+              className={cn('flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium transition-colors', 'text-slate-400 hover:text-white hover:bg-slate-700 disabled:opacity-50')}
               title={`新建 ${cfg.label} 模式对话`}
             >
               <cfg.icon size={12} className={cfg.color} />
@@ -70,10 +90,11 @@ export function Sidebar({ sessions, currentSessionId, onConfigOpen, onSessionsCh
 
         {/* New chat button */}
         <button
-          onClick={() => router.push('/chat/new')}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-slate-600 hover:border-slate-500"
+          onClick={() => createSession('QUICK')}
+          disabled={creating}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-300 hover:text-white hover:bg-slate-700 transition-colors border border-slate-600 hover:border-slate-500 disabled:opacity-50"
         >
-          <PlusIcon size={14} />
+          {creating ? <Loader2 size={14} className="animate-spin" /> : <PlusIcon size={14} />}
           新对话
         </button>
       </div>

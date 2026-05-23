@@ -8,13 +8,25 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   })
   if (!session) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Include unanswered expert questions as synthetic EXPERT_QUESTION messages
+  // Include expert questions as synthetic EXPERT_QUESTION messages.
+  // Skip questions for steps that have already COMPLETED — they are stale (the pipeline
+  // timed out waiting for answers and continued without them).
+  const completedStepIndexes = new Set(
+    session.steps.filter(s => s.status === 'COMPLETED').map(s => s.stepIndex)
+  )
+
   const expertQuestions = await prisma.expertQuestion.findMany({
     where: { sessionId: params.id },
     orderBy: { createdAt: 'asc' }
   })
 
-  const expertMessages = expertQuestions.map(q => ({
+  // For each question: answered ones always show (context). Unanswered ones only show
+  // if their step hasn't completed yet (i.e., they still need an answer).
+  const filteredQuestions = expertQuestions.filter(
+    q => q.answered || !completedStepIndexes.has(q.stepIndex)
+  )
+
+  const expertMessages = filteredQuestions.map(q => ({
     id: `eq-${q.id}`,
     sessionId: q.sessionId,
     role: 'ASSISTANT' as const,

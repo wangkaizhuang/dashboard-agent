@@ -24,7 +24,24 @@ export async function runPipeline(
 
   if (!session) throw new Error('Session not found')
 
-  const failedStep = session.steps.find(s => s.status === 'FAILED')
+  // Reset any stuck RUNNING steps (e.g. from a previous server restart) to FAILED
+  const stuckRunning = session.steps.filter(s => s.status === 'RUNNING')
+  for (const stuck of stuckRunning) {
+    await prisma.pipelineStep.update({
+      where: { id: stuck.id },
+      data: { status: 'FAILED', content: '服务重启导致步骤中断，请重新发送消息继续。' }
+    })
+  }
+  if (stuckRunning.length > 0) {
+    await prisma.session.update({ where: { id: sessionId }, data: { status: 'PAUSED' } })
+  }
+
+  // Re-fetch steps after cleanup
+  const cleanedSteps = await prisma.pipelineStep.findMany({
+    where: { sessionId }, orderBy: { stepIndex: 'asc' }
+  })
+
+  const failedStep = cleanedSteps.find(s => s.status === 'FAILED')
   const startIndex = failedStep ? failedStep.stepIndex : 0
 
   // Prisma returns Date for createdAt; map to string to satisfy our Message type
@@ -41,13 +58,13 @@ export async function runPipeline(
   const history = contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')
 
   const previousOutputs: Record<string, string> = {}
-  session.steps.filter(s => s.status === 'COMPLETED').forEach(s => {
+  cleanedSteps.filter(s => s.status === 'COMPLETED').forEach(s => {
     previousOutputs[s.stepName] = s.content
   })
 
   for (let i = startIndex; i < STEP_ORDER.length; i++) {
     const stepName = STEP_ORDER[i]
-    const existingStep = session.steps.find(s => s.stepName === stepName)
+    const existingStep = cleanedSteps.find(s => s.stepName === stepName)
     const step = existingStep
       ? await prisma.pipelineStep.update({ where: { id: existingStep.id }, data: { status: 'RUNNING', content: '' } })
       : await prisma.pipelineStep.create({ data: { sessionId, stepIndex: i, stepName, status: 'RUNNING', content: '' } })
@@ -55,7 +72,10 @@ export async function runPipeline(
     let content = ''
 
     try {
-      if (mode === 'EXPERT') {
+      // EXPERT mode: only gather expert input for REQUIREMENTS_ANALYSIS.
+      // Asking questions for every step creates a confusing UX and causes long 5-min waits
+      // on each subsequent step while the user is unaware new questions have appeared.
+      if (mode === 'EXPERT' && stepName === 'REQUIREMENTS_ANALYSIS') {
         const hasGaps = await analyzeGaps(sessionId, i, stepName, userInput, history, send)
         if (hasGaps) {
           const answers = await waitForExpertAnswers(sessionId, i)

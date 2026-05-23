@@ -25,6 +25,11 @@ export function ChatPanel({
   const [selectedMode, setSelectedMode] = useState<Mode>('QUICK')
   const { handleSSEEvent, initPipeline, loadStepsFromDB, setRunning } = usePipelineStore()
 
+  // Synchronous guard that prevents double-send even before React re-renders.
+  // React state (isLoading) is reliable for UI but has a render-cycle delay;
+  // a ref is set synchronously so concurrent async calls are blocked immediately.
+  const isLoadingRef = useRef(false)
+
   // Always-current ref for sendMessage so it can be called from effects / timeouts
   const sendMessageRef = useRef<(content: string, modeOverride?: Mode) => Promise<void>>()
 
@@ -97,17 +102,21 @@ export function ChatPanel({
   }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopLoading = () => {
+    isLoadingRef.current = false
     setIsLoading(false)
     setRunning(false)
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sendMessage = async (content: string, modeOverride?: Mode) => {
-    if (isLoading) return
+    // Use the ref (not state) as the guard — refs are synchronous and not subject
+    // to the render-cycle delay that makes state-based guards unreliable for async functions.
+    if (isLoadingRef.current) return
     const mode = modeOverride ?? selectedMode
 
     // ── Draft session: create real session first, then navigate ──────────────
     if (sessionId === 'new') {
+      isLoadingRef.current = true
       try {
         const res = await fetch('/api/sessions', {
           method: 'POST',
@@ -121,6 +130,7 @@ export function ChatPanel({
         router.replace(`/chat/${session.id}`)
       } catch (err) {
         console.error('Failed to create session:', err)
+        isLoadingRef.current = false  // Reset so user can retry
       }
       return
     }
@@ -135,6 +145,7 @@ export function ChatPanel({
       type: 'TEXT',
       createdAt: new Date().toISOString(),
     }
+    isLoadingRef.current = true
     setMessages(prev => [...prev, userMsg])
     setIsLoading(true)
     setRunning(true)
@@ -154,8 +165,9 @@ export function ChatPanel({
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let buffer = ''
+      let streamDone = false
 
-      while (true) {
+      while (!streamDone) {
         const { done, value } = await reader.read()
         if (done) break
 
@@ -166,7 +178,10 @@ export function ChatPanel({
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue
           const data = line.slice(6).trim()
-          if (data === '[DONE]') break
+          // [DONE] must exit the outer while loop, not just the inner for loop.
+          // Previously `break` here only broke the for loop and the reader was
+          // called one more time before naturally seeing done===true.
+          if (data === '[DONE]') { streamDone = true; break }
 
           try {
             const event: SSEEvent = JSON.parse(data)

@@ -1,67 +1,139 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { usePipelineStore } from '@/store/pipeline'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
-import type { Message, SSEEvent } from '@/types'
+import type { Message, SSEEvent, Mode } from '@/types'
 
 interface ChatPanelProps {
   sessionId: string
   onTemplateReady: (templateId: string) => void
   onSessionTitleChange: () => void
+  onSessionCreated: () => void
 }
 
-export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: ChatPanelProps) {
+export function ChatPanel({
+  sessionId,
+  onTemplateReady,
+  onSessionTitleChange,
+  onSessionCreated,
+}: ChatPanelProps) {
+  const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedMode, setSelectedMode] = useState<Mode>('QUICK')
   const { handleSSEEvent, initPipeline, loadStepsFromDB, setRunning } = usePipelineStore()
 
+  // Always-current ref for sendMessage so it can be called from effects / timeouts
+  const sendMessageRef = useRef<(content: string, modeOverride?: Mode) => Promise<void>>()
+
   const loadSession = useCallback(async () => {
+    if (sessionId === 'new') return
     try {
       const res = await fetch(`/api/sessions/${sessionId}`)
-      if (res.ok) {
-        const session = await res.json()
-        setMessages(session.messages || [])
-        // If session has a template, inject a template card message
-        if (session.template) {
-          const templateMsg: Message = {
-            id: `template-${session.template.id}`,
-            sessionId,
-            role: 'ASSISTANT',
-            content: '',
-            type: 'TEMPLATE_CARD',
-            metadata: { templateId: session.template.id },
-            createdAt: session.template.createdAt
-          }
-          setMessages(prev => {
-            const hasTemplate = prev.some(m => m.type === 'TEMPLATE_CARD')
-            return hasTemplate ? prev : [...(session.messages || []), templateMsg]
-          })
+      if (!res.ok) return
+      const session = await res.json()
+      setMessages(session.messages || [])
+      // Sync mode selector to what the session has in DB
+      if (session.mode) setSelectedMode(session.mode as Mode)
+      // If session already has a completed template, inject the card
+      if (session.template) {
+        const templateMsg: Message = {
+          id: `template-${session.template.id}`,
+          sessionId,
+          role: 'ASSISTANT',
+          content: '',
+          type: 'TEMPLATE_CARD',
+          metadata: { templateId: session.template.id },
+          createdAt: session.template.createdAt,
         }
+        setMessages(prev => {
+          const hasTemplate = prev.some(m => m.type === 'TEMPLATE_CARD')
+          return hasTemplate ? prev : [...(session.messages || []), templateMsg]
+        })
       }
     } catch (err) {
       console.error('Failed to load session:', err)
     }
   }, [sessionId])
 
+  // Keep sendMessageRef pointing to the latest sendMessage closure after every render
   useEffect(() => {
+    sendMessageRef.current = (content, modeOverride) => sendMessage(content, modeOverride)
+  })
+
+  // Initialize when sessionId changes
+  useEffect(() => {
+    if (sessionId === 'new') {
+      // Draft state — show empty UI, reset pipeline
+      setMessages([])
+      setIsLoading(false)
+      setRunning(false)
+      initPipeline('new')
+      return
+    }
+
     initPipeline(sessionId)
     loadStepsFromDB(sessionId)
     loadSession()
-  }, [sessionId, initPipeline, loadStepsFromDB, loadSession])
+
+    // If we just navigated here from the /chat/new draft with a pending first message,
+    // retrieve it from sessionStorage and auto-send it.
+    const pendingKey = `pendingMsg:${sessionId}`
+    const pendingRaw = sessionStorage.getItem(pendingKey)
+    if (pendingRaw) {
+      sessionStorage.removeItem(pendingKey)
+      try {
+        const { content: pendingContent, mode: pendingMode } = JSON.parse(pendingRaw)
+        // Pass the original mode so the pipeline runs in the mode the user chose,
+        // regardless of what selectedMode state is at this point.
+        setTimeout(() => { sendMessageRef.current?.(pendingContent, pendingMode as Mode) }, 150)
+      } catch {
+        // Fallback: treat raw value as plain content (legacy)
+        setTimeout(() => { sendMessageRef.current?.(pendingRaw) }, 150)
+      }
+    }
+  }, [sessionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const stopLoading = () => {
     setIsLoading(false)
     setRunning(false)
   }
 
-  const sendMessage = async (content: string) => {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sendMessage = async (content: string, modeOverride?: Mode) => {
     if (isLoading) return
+    const mode = modeOverride ?? selectedMode
 
+    // ── Draft session: create real session first, then navigate ──────────────
+    if (sessionId === 'new') {
+      try {
+        const res = await fetch('/api/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mode }),
+        })
+        const session = await res.json()
+        // Store the pending message AND its mode so the auto-send uses the correct pipeline mode
+        sessionStorage.setItem(`pendingMsg:${session.id}`, JSON.stringify({ content, mode }))
+        onSessionCreated()
+        router.replace(`/chat/${session.id}`)
+      } catch (err) {
+        console.error('Failed to create session:', err)
+      }
+      return
+    }
+
+    // ── Real session: optimistic UI + SSE pipeline ────────────────────────────
     const tempId = `temp-${Date.now()}`
     const userMsg: Message = {
-      id: tempId, sessionId, role: 'USER', content, type: 'TEXT',
-      createdAt: new Date().toISOString()
+      id: tempId,
+      sessionId,
+      role: 'USER',
+      content,
+      type: 'TEXT',
+      createdAt: new Date().toISOString(),
     }
     setMessages(prev => [...prev, userMsg])
     setIsLoading(true)
@@ -71,10 +143,13 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
       const response = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, mode }),
       })
 
       if (!response.ok || !response.body) throw new Error('Request failed')
+
+      // Message is now in DB — refresh sidebar so this session appears in the list
+      onSessionCreated()
 
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
@@ -95,10 +170,13 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
 
           try {
             const event: SSEEvent = JSON.parse(data)
+
+            // Silently drop heartbeat pings — they just keep the connection alive
+            if (event.type === 'heartbeat') continue
+
             handleSSEEvent(event)
 
             if (event.type === 'expert_question' && event.question) {
-              // Inject expert question as a synthetic message in the chat
               const q = event.question
               const eqMsg: Message = {
                 id: `eq-${q.id}`,
@@ -119,6 +197,7 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
               }
               setMessages(prev => [...prev, eqMsg])
             }
+
             if (event.type === 'template_ready' && event.templateId) {
               onTemplateReady(event.templateId)
             }
@@ -142,14 +221,20 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
   }
 
   return (
-    <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+    <div
+      className="flex flex-col flex-1 min-w-0 h-full overflow-hidden"
+      style={{ background: 'var(--color-bg)' }}
+    >
+      {/* Header */}
       <div
         className="shrink-0 px-4 py-3 border-b flex items-center"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
       >
-        <span className="text-sm font-semibold" style={{ color: 'var(--color-text-1)' }}>对话</span>
+        <span className="text-sm font-semibold" style={{ color: 'var(--color-text-1)' }}>
+          对话
+        </span>
         {isLoading && (
-          <span className="ml-2 text-xs text-indigo-500 animate-pulse">生成中...</span>
+          <span className="ml-2 text-xs text-indigo-500 animate-pulse">生成中…</span>
         )}
       </div>
 
@@ -160,7 +245,12 @@ export function ChatPanel({ sessionId, onTemplateReady, onSessionTitleChange }: 
         onExpertAnswered={loadSession}
       />
 
-      <ChatInput onSend={sendMessage} disabled={isLoading} />
+      <ChatInput
+        onSend={content => sendMessage(content)}
+        disabled={isLoading}
+        selectedMode={selectedMode}
+        onModeChange={setSelectedMode}
+      />
     </div>
   )
 }

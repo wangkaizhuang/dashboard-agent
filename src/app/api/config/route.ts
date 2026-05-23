@@ -11,6 +11,7 @@ export async function GET() {
     apiKeyMasked: cfg.apiKey ? `${cfg.apiKey.slice(0, 8)}...${cfg.apiKey.slice(-4)}` : '',
     contextMaxTokens: cfg.contextMaxTokens,
     qualityScoreThreshold: cfg.qualityScoreThreshold,
+    stepThresholds: cfg.stepThresholds ?? {},
   })
 }
 
@@ -23,6 +24,7 @@ export async function POST(request: Request) {
   if (body.apiKey && body.apiKey !== '***masked***') updates.apiKey = body.apiKey
   if (typeof body.contextMaxTokens === 'number') updates.contextMaxTokens = body.contextMaxTokens
   if (typeof body.qualityScoreThreshold === 'number') updates.qualityScoreThreshold = body.qualityScoreThreshold
+  if (body.stepThresholds && typeof body.stepThresholds === 'object') updates.stepThresholds = body.stepThresholds
   setRuntimeConfig(updates)
   return NextResponse.json({ ok: true })
 }

@@ -28,11 +28,18 @@ export function createSSEStream(
         } catch { /* already closed */ }
       }
 
+      // SSE heartbeat: send a keepalive ping every 15 seconds to prevent proxy / load-balancer
+      // timeouts on long-running pipeline steps.
+      const heartbeatInterval = setInterval(() => {
+        send({ type: 'heartbeat' })
+      }, 15_000)
+
       try {
         await handler(send)
       } catch (err) {
         send({ type: 'error', message: (err as Error).message })
       } finally {
+        clearInterval(heartbeatInterval)
         closeStream()
       }
     },

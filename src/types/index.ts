@@ -81,6 +81,7 @@ export type SSEEventType =
   | 'template_ready'
   | 'pipeline_complete'
   | 'pipeline_paused'
+  | 'heartbeat'
   | 'error'
 
 export interface SSEEvent {

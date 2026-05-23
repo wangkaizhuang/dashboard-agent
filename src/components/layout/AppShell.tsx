@@ -1,6 +1,5 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { Sidebar } from './Sidebar'
 import { ChatPanel } from './ChatPanel'
 import { ProgressPanel } from './ProgressPanel'
@@ -8,7 +7,6 @@ import { ConfigDrawer } from '@/components/settings/ConfigDrawer'
 import type { Session } from '@/types'
 
 export function AppShell({ sessionId }: { sessionId: string }) {
-  const router = useRouter()
   const [sessions, setSessions] = useState<Session[]>([])
   const [rightView, setRightView] = useState<'progress' | 'preview'>('progress')
   const [configOpen, setConfigOpen] = useState(false)
@@ -20,23 +18,11 @@ export function AppShell({ sessionId }: { sessionId: string }) {
 
   useEffect(() => { refreshSessions() }, [refreshSessions])
 
-  // Redirect /chat/new → create a real session and navigate to it
+  // Reset preview panel when the user navigates to a different session
   useEffect(() => {
-    if (sessionId !== 'new') return
-    const params = new URLSearchParams(window.location.search)
-    const mode = params.get('mode') || 'QUICK'
-    fetch('/api/sessions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode })
-    })
-      .then(r => r.json())
-      .then(session => {
-        refreshSessions()
-        router.replace(`/chat/${session.id}`)
-      })
-      .catch(console.error)
-  }, [sessionId, router, refreshSessions])
+    setPreviewTemplateId(null)
+    setRightView('progress')
+  }, [sessionId])
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -54,6 +40,7 @@ export function AppShell({ sessionId }: { sessionId: string }) {
             setRightView('preview')
           }}
           onSessionTitleChange={refreshSessions}
+          onSessionCreated={refreshSessions}
         />
         <ProgressPanel
           sessionId={sessionId}

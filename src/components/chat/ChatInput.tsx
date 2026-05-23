@@ -1,15 +1,56 @@
 'use client'
 import { useState, useRef, KeyboardEvent } from 'react'
-import { SendHorizonal, Loader2 } from 'lucide-react'
+import { SendHorizonal, Loader2, Zap, Brain, GraduationCap } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { Mode } from '@/types'
+
+interface ModeOption {
+  label: string
+  desc: string
+  icon: React.ElementType
+  color: string
+  activeColor: string
+}
+
+const MODE_OPTIONS: Record<Mode, ModeOption> = {
+  QUICK: {
+    label: '快速',
+    desc: '直接生成，速度最快',
+    icon: Zap,
+    color: 'text-emerald-500',
+    activeColor: 'bg-emerald-50 text-emerald-700 border-emerald-300',
+  },
+  THINK: {
+    label: '深思',
+    desc: '推理链 · 质量更高',
+    icon: Brain,
+    color: 'text-blue-500',
+    activeColor: 'bg-blue-50 text-blue-700 border-blue-300',
+  },
+  EXPERT: {
+    label: '专家',
+    desc: '交互式需求补全',
+    icon: GraduationCap,
+    color: 'text-purple-500',
+    activeColor: 'bg-purple-50 text-purple-700 border-purple-300',
+  },
+}
 
 interface ChatInputProps {
   onSend: (content: string) => void
   disabled?: boolean
   placeholder?: string
+  selectedMode: Mode
+  onModeChange: (mode: Mode) => void
 }
 
-export function ChatInput({ onSend, disabled = false, placeholder = '描述您想要的仪表板...' }: ChatInputProps) {
+export function ChatInput({
+  onSend,
+  disabled = false,
+  placeholder = '描述您想要的仪表板…',
+  selectedMode,
+  onModeChange,
+}: ChatInputProps) {
   const [value, setValue] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -40,9 +81,10 @@ export function ChatInput({ onSend, disabled = false, placeholder = '描述您�
 
   return (
     <div
-      className="px-4 py-3 border-t"
+      className="px-4 pt-3 pb-2 border-t"
       style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
     >
+      {/* Input box */}
       <div
         className={cn(
           'flex items-end gap-2 rounded-xl border px-3 py-2 transition-colors',
@@ -77,9 +119,34 @@ export function ChatInput({ onSend, disabled = false, placeholder = '描述您�
           {disabled ? <Loader2 size={15} className="animate-spin" /> : <SendHorizonal size={15} />}
         </button>
       </div>
-      <p className="text-xs text-slate-400 mt-1.5 text-center">
-        Enter 发送 · Shift+Enter 换行
-      </p>
+
+      {/* Mode selector + hint */}
+      <div className="flex items-center gap-1 mt-2">
+        {(Object.entries(MODE_OPTIONS) as [Mode, ModeOption][]).map(([mode, cfg]) => {
+          const Icon = cfg.icon
+          const isActive = selectedMode === mode
+          return (
+            <button
+              key={mode}
+              onClick={() => onModeChange(mode)}
+              disabled={disabled}
+              title={cfg.desc}
+              className={cn(
+                'flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all border disabled:opacity-50',
+                isActive
+                  ? cfg.activeColor
+                  : 'border-transparent text-slate-400 hover:text-slate-600 hover:bg-slate-100'
+              )}
+            >
+              <Icon size={11} className={isActive ? undefined : cfg.color} />
+              {cfg.label}
+            </button>
+          )
+        })}
+        <span className="ml-auto text-xs text-slate-400">
+          Enter 发送 · Shift+Enter 换行
+        </span>
+      </div>
     </div>
   )
 }

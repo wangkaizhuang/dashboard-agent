@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X, Eye, EyeOff, RotateCcw, Save } from 'lucide-react'
+import { X, Eye, EyeOff, RotateCcw, Save, ChevronDown, ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { DEFAULT_CONFIG, type AppConfig } from '@/types'
+import { DEFAULT_CONFIG, STEP_LABELS, STEP_ORDER, type AppConfig, type StepName } from '@/types'
 import { toast } from 'sonner'
 
 const PRESET_MODELS = [
@@ -37,12 +37,13 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
   const [apiEndpoint, setApiEndpoint] = useState('https://www.packyapi.com/v1')
   const [selectedModel, setSelectedModel] = useState('gpt-5.4-mini')
   const [customModel, setCustomModel] = useState('')
+  const [showAdvanced, setShowAdvanced] = useState(false)
+  const [stepThresholds, setStepThresholds] = useState<Partial<Record<StepName, number>>>({})
 
   const isCustomModel = !PRESET_MODELS.some(m => m.id === selectedModel) || selectedModel === '__custom__'
 
   useEffect(() => {
     if (!open) return
-    // Load server config
     fetch('/api/config').then(r => r.json()).then(cfg => {
       if (cfg.model) {
         const isPreset = PRESET_MODELS.some(m => m.id === cfg.model)
@@ -54,28 +55,27 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
         }
       }
       if (cfg.baseUrl) setApiEndpoint(cfg.baseUrl)
-      if (cfg.apiKeyMasked) setApiKey(cfg.apiKeyMasked) // display masked key
+      if (cfg.apiKeyMasked) setApiKey(cfg.apiKeyMasked)
       if (cfg.contextMaxTokens) setConfig(c => ({ ...c, contextMaxTokens: cfg.contextMaxTokens }))
-      if (cfg.qualityScoreThreshold) setConfig(c => ({ ...c, qualityScoreThreshold: cfg.qualityScoreThreshold }))
+      if (cfg.qualityScoreThreshold !== undefined) setConfig(c => ({ ...c, qualityScoreThreshold: cfg.qualityScoreThreshold }))
+      if (cfg.stepThresholds) setStepThresholds(cfg.stepThresholds)
     }).catch(() => {})
   }, [open])
 
   const handleSave = async () => {
     const model = isCustomModel ? customModel : selectedModel
-    // Save to server
     await fetch('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
         baseUrl: apiEndpoint,
-        // Only send apiKey if user changed it (not the masked placeholder)
         ...(!apiKey.includes('...') && apiKey ? { apiKey } : {}),
         contextMaxTokens: config.contextMaxTokens,
         qualityScoreThreshold: config.qualityScoreThreshold,
+        stepThresholds,
       })
     }).catch(() => {})
-    // Also save display prefs to localStorage
     localStorage.setItem('dashboard-agent-config', JSON.stringify(config))
     toast.success('配置已保存')
     onClose()
@@ -83,8 +83,11 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
 
   const handleReset = () => {
     setConfig(DEFAULT_CONFIG)
+    setStepThresholds({})
     toast.info('已恢复默认值')
   }
+
+  const globalThreshold = config.qualityScoreThreshold
 
   return (
     <AnimatePresence>
@@ -111,7 +114,8 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
-              {/* API Settings */}
+
+              {/* Model Settings */}
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-2)' }}>模型设置</h3>
                 <div className="space-y-3">
@@ -124,7 +128,6 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
                     />
                   </div>
 
-                  {/* Model selection grid */}
                   <div>
                     <label className="block text-sm mb-2" style={{ color: 'var(--color-text-1)' }}>选择模型</label>
                     <div className="grid grid-cols-2 gap-1.5 mb-2">
@@ -148,7 +151,6 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
                           <span className="text-[10px] text-slate-400 mt-0.5">{m.provider}</span>
                         </button>
                       ))}
-                      {/* Custom option */}
                       <button
                         onClick={() => { setSelectedModel('__custom__'); setCustomModel('') }}
                         className={cn(
@@ -159,19 +161,15 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
                         <span className={cn('text-xs font-semibold', isCustomModel ? 'text-indigo-700' : 'text-slate-500')}>✏️ 自定义模型</span>
                       </button>
                     </div>
-                    {/* Custom model text input — shown when custom selected or when current model isn't in preset list */}
                     {isCustomModel && (
                       <input
-                        type="text"
-                        value={customModel}
-                        onChange={e => setCustomModel(e.target.value)}
+                        type="text" value={customModel} onChange={e => setCustomModel(e.target.value)}
                         placeholder="输入模型名称，如 gpt-4-turbo"
                         className="w-full px-3 py-2 rounded-lg border text-sm outline-none focus:ring-2 focus:ring-indigo-500"
                         style={{ borderColor: 'var(--color-border)' }}
                         autoFocus
                       />
                     )}
-                    {/* Show currently selected model ID */}
                     {!isCustomModel && (
                       <p className="text-xs mt-1" style={{ color: 'var(--color-text-2)' }}>
                         当前: <code className="bg-slate-100 px-1 rounded">{selectedModel}</code>
@@ -231,18 +229,77 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
               {/* Quality Control */}
               <section>
                 <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: 'var(--color-text-2)' }}>质量控制</h3>
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span style={{ color: 'var(--color-text-1)' }}>评分阈值</span>
-                    <span className="font-mono text-indigo-600">{config.qualityScoreThreshold} 分</span>
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span style={{ color: 'var(--color-text-1)' }}>全局评分阈值</span>
+                      <span className="font-mono text-indigo-600">{globalThreshold} 分</span>
+                    </div>
+                    <input type="range" min={0} max={80}
+                      value={globalThreshold}
+                      onChange={e => setConfig(c => ({ ...c, qualityScoreThreshold: Number(e.target.value) }))}
+                      className="w-full accent-indigo-600"
+                    />
+                    <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-2)' }}>
+                      <span>0（不限制）</span><span>80（严格）</span>
+                    </div>
                   </div>
-                  <input type="range" min={0} max={80}
-                    value={config.qualityScoreThreshold}
-                    onChange={e => setConfig(c => ({ ...c, qualityScoreThreshold: Number(e.target.value) }))}
-                    className="w-full accent-indigo-600"
-                  />
-                  <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--color-text-2)' }}>
-                    <span>0 分（不限制）</span><span>80 分（严格）</span>
+
+                  {/* Advanced settings — collapsible */}
+                  <div className="border rounded-lg overflow-hidden" style={{ borderColor: 'var(--color-border)' }}>
+                    <button
+                      onClick={() => setShowAdvanced(v => !v)}
+                      className="w-full flex items-center justify-between px-3 py-2.5 text-sm font-medium hover:bg-gray-50 transition-colors"
+                      style={{ color: 'var(--color-text-1)' }}
+                    >
+                      <span>高级设置 — 分步骤阈值</span>
+                      {showAdvanced ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                    </button>
+
+                    {showAdvanced && (
+                      <div className="px-3 pb-3 pt-1 space-y-3 border-t" style={{ borderColor: 'var(--color-border)', background: '#FAFAFE' }}>
+                        <p className="text-xs text-slate-500 leading-snug">
+                          为每个步骤单独设置评分阈值。若不设置，则使用全局阈值（{globalThreshold} 分）。
+                        </p>
+                        {STEP_ORDER.map(stepName => {
+                          const val = stepThresholds[stepName] ?? globalThreshold
+                          const hasOverride = stepThresholds[stepName] !== undefined
+                          return (
+                            <div key={stepName}>
+                              <div className="flex items-center justify-between text-xs mb-1">
+                                <span style={{ color: 'var(--color-text-1)' }}>
+                                  {STEP_LABELS[stepName]}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {hasOverride && (
+                                    <button
+                                      onClick={() => setStepThresholds(t => {
+                                        const next = { ...t }
+                                        delete next[stepName]
+                                        return next
+                                      })}
+                                      className="text-[10px] text-slate-400 hover:text-red-500 transition-colors"
+                                      title="重置为全局阈值"
+                                    >
+                                      重置
+                                    </button>
+                                  )}
+                                  <span className={cn('font-mono', hasOverride ? 'text-indigo-600' : 'text-slate-400')}>
+                                    {val} 分
+                                  </span>
+                                </div>
+                              </div>
+                              <input
+                                type="range" min={0} max={80}
+                                value={val}
+                                onChange={e => setStepThresholds(t => ({ ...t, [stepName]: Number(e.target.value) }))}
+                                className={cn('w-full', hasOverride ? 'accent-indigo-600' : 'accent-slate-300')}
+                              />
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

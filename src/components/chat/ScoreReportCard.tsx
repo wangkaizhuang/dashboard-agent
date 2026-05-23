@@ -1,5 +1,5 @@
 'use client'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, MessageSquarePlus } from 'lucide-react'
 import { STEP_LABELS, type StepName } from '@/types'
 
 interface ScoreReportCardProps {
@@ -10,9 +10,11 @@ interface ScoreReportCardProps {
 }
 
 export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreReportCardProps) {
-
   return (
-    <div className="rounded-xl border overflow-hidden max-w-sm" style={{ borderColor: '#FECACA', background: '#FFF5F5' }}>
+    <div
+      className="rounded-xl border overflow-hidden max-w-sm"
+      style={{ borderColor: '#FECACA', background: '#FFF5F5' }}
+    >
       <div className="px-4 py-3 flex items-start gap-2">
         <div className="w-6 h-6 rounded-lg bg-red-100 flex items-center justify-center shrink-0 mt-0.5">
           <AlertTriangle size={13} className="text-red-500" />
@@ -25,10 +27,10 @@ export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreRep
             </span>
           </div>
           <p className="text-xs text-red-600 mb-2">
-            步骤「{STEP_LABELS[stepName as StepName] || stepName}」评分低于阈值，请补充以下信息后继续：
+            步骤「{STEP_LABELS[stepName as StepName] || stepName}」评分低于阈值，以下问题需要补充：
           </p>
           {issues.length > 0 && (
-            <ul className="text-xs text-red-700 space-y-1">
+            <ul className="text-xs text-red-700 space-y-1 mb-3">
               {issues.map((issue, i) => (
                 <li key={i} className="flex gap-1.5">
                   <span className="shrink-0 mt-0.5">•</span>
@@ -37,9 +39,18 @@ export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreRep
               ))}
             </ul>
           )}
-          <p className="text-xs text-red-500 mt-2">
-            在输入框中补充详细信息后，对话将从当前步骤继续。
-          </p>
+
+          {/* Recovery call-to-action */}
+          <div
+            className="flex items-start gap-2 p-2.5 rounded-lg"
+            style={{ background: '#FEE2E2', border: '1px solid #FECACA' }}
+          >
+            <MessageSquarePlus size={13} className="text-red-500 shrink-0 mt-0.5" />
+            <p className="text-xs text-red-700 leading-snug">
+              <span className="font-semibold">如何继续：</span>
+              在下方输入框中补充上述缺失信息，发送后流程将从当前步骤自动重新开始。
+            </p>
+          </div>
         </div>
       </div>
     </div>

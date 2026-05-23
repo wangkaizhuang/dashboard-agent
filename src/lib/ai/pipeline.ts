@@ -5,6 +5,7 @@ import { runQuickStep, buildStepPrompts } from './modes/quick'
 import { runThinkStep } from './modes/think'
 import { analyzeGaps, waitForExpertAnswers } from './modes/expert'
 import { SCORING_SYSTEM, SCORING_USER } from './prompts/scoring'
+import { getRuntimeConfig } from '@/lib/config/runtime'
 import type { SSEEvent, StepName, Mode } from '@/types'
 import { STEP_ORDER } from '@/types'
 
@@ -52,7 +53,7 @@ export async function runPipeline(
   }))
   const contextMessages = await buildCompressedContext(
     mappedMessages,
-    parseInt(process.env.CONTEXT_MAX_TOKENS || '128000'),
+    getRuntimeConfig().contextMaxTokens,
     10
   )
   const history = contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')
@@ -111,14 +112,18 @@ export async function runPipeline(
 
       send({ type: 'step_score', stepIndex: i, score })
 
-      if (score < scoreThreshold) {
+      // Use per-step threshold if configured; fall back to global threshold
+      const cfg = getRuntimeConfig()
+      const effectiveThreshold = cfg.stepThresholds?.[stepName] ?? scoreThreshold
+
+      if (score < effectiveThreshold) {
         await prisma.pipelineStep.update({
           where: { id: step.id },
           data: { status: 'FAILED', content, score, issues: issues as never }
         })
         await prisma.session.update({ where: { id: sessionId }, data: { status: 'PAUSED' } })
         send({ type: 'step_failed', stepIndex: i, issues })
-        send({ type: 'pipeline_paused', reason: `步骤 "${stepName}" 评分 ${score} 低于阈值 ${scoreThreshold}，请补充信息` })
+        send({ type: 'pipeline_paused', reason: `步骤 "${stepName}" 评分 ${score} 低于阈值 ${effectiveThreshold}，请补充信息` })
         return
       }
 
@@ -142,10 +147,12 @@ export async function runPipeline(
   }
 
   const htmlContent = previousOutputs['TEMPLATE_GENERATION'] || ''
+  const templateStep = cleanedSteps.find(s => s.stepName === 'TEMPLATE_GENERATION' && s.status === 'COMPLETED')
+  const templateScore = typeof templateStep?.score === 'number' ? templateStep.score : 75
   const template = await prisma.template.upsert({
     where: { sessionId },
-    create: { sessionId, htmlContent, score: 85, components: [] },
-    update: { htmlContent, score: 85 }
+    create: { sessionId, htmlContent, score: templateScore, components: [] },
+    update: { htmlContent, score: templateScore }
   })
 
   let sessionTitle: string | undefined

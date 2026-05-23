@@ -1,12 +1,15 @@
 import fs from 'fs'
 import path from 'path'
 
+export type StepThresholds = Partial<Record<string, number>>
+
 export interface RuntimeConfig {
   model: string
   baseUrl: string
   apiKey: string
   contextMaxTokens: number
   qualityScoreThreshold: number
+  stepThresholds: StepThresholds
 }
 
 const CONFIG_FILE = path.join(process.cwd(), '.runtime-config.json')
@@ -35,6 +38,7 @@ export function getRuntimeConfig(): RuntimeConfig {
     apiKey: _override.apiKey || process.env.OPENAI_API_KEY || '',
     contextMaxTokens: _override.contextMaxTokens ?? parseInt(process.env.CONTEXT_MAX_TOKENS || '128000'),
     qualityScoreThreshold: _override.qualityScoreThreshold ?? parseInt(process.env.QUALITY_SCORE_THRESHOLD || '30'),
+    stepThresholds: _override.stepThresholds ?? {},
   }
 }
 

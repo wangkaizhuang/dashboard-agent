@@ -2,7 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db/prisma'
 
 export async function GET() {
+  // Only return sessions that have at least one message — sessions with no messages
+  // are draft sessions that were never used (e.g. created by an accidental click and
+  // never had any conversation). We hide them so the sidebar stays clean.
   const sessions = await prisma.session.findMany({
+    where: { messages: { some: {} } },
     orderBy: { updatedAt: 'desc' },
     select: {
       id: true, title: true, mode: true, status: true,

@@ -163,10 +163,10 @@ export function TemplatePreview({
   const hoverOverlay = mounted && annotationMode && hovered && !locked
     ? createPortal(
         <div
-          className="fixed pointer-events-none border-2 border-blue-400 rounded-lg z-[9999] transition-all duration-100"
+          className="fixed pointer-events-none border-2 border-indigo-500 rounded-lg z-[9999] transition-all duration-100"
           style={{ top: hovered.bounds.top, left: hovered.bounds.left, width: hovered.bounds.width, height: hovered.bounds.height }}
         >
-          <span className="absolute -top-6 left-0 bg-blue-500 text-white text-xs px-2 py-0.5 rounded-md whitespace-nowrap shadow-md">
+          <span className="absolute -top-6 left-0 bg-indigo-500 text-white text-xs px-2 py-0.5 rounded-md whitespace-nowrap shadow-md">
             {hovered.label}
           </span>
         </div>,

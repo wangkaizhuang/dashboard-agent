@@ -108,9 +108,6 @@ export function ProgressPanel({
             )}
           </div>
 
-          {/* Annotation toggle — only meaningful when preview is visible */}
-          {templateId && view === 'preview' && <AnnotationToggle compact />}
-
           {/* View toggle */}
           {templateId && (
             <div className="flex items-center gap-1 p-0.5 rounded-lg bg-slate-100">

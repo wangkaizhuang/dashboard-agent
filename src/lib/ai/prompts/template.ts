@@ -130,21 +130,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 \`\`\`
 
-## ECharts 通用配置（每个图表都要应用）
-\`\`\`javascript
-const CHART_COLORS = ['#4F46E5','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899','#14B8A6']
-const AXIS_STYLE = {
-  axisLine: { lineStyle: { color: '#E2E8F0' } },
-  axisTick: { show: false },
-  axisLabel: { color: '#64748B', fontSize: 11 },
-  splitLine: { lineStyle: { color: '#F1F5F9' } }
-}
-const TOOLTIP_STYLE = {
-  backgroundColor: '#1E293B', borderColor: '#334155',
-  textStyle: { color: '#F1F5F9', fontSize: 12 },
-  borderRadius: 8, padding: [8, 12]
-}
-\`\`\`
+## ECharts 通用配置（已在 head 全局声明块中定义，各组件脚本可直接使用）
+⚠️ CHART_COLORS、AXIS_STYLE、TOOLTIP_STYLE、DC_CHARTS 均在 head 全局脚本中声明，
+   各组件的内联 script 中直接引用即可，禁止重复 const/var 声明（会产生 SyntaxError）。
 
 ## 组件示例代码
 
@@ -182,7 +170,9 @@ const TOOLTIP_STYLE = {
   <div id="lineChart" style="height:260px;padding:8px"></div>
 </div>
 <script>
+/* CHART_COLORS/AXIS_STYLE/TOOLTIP_STYLE/DC_CHARTS 已在 head 声明，直接使用 */
 const lineChart = echarts.init(document.getElementById('lineChart'))
+DC_CHARTS['lineChart'] = lineChart  // 注册到 DC_CHARTS 以支持 resize 和联动
 const lineData = {
   '6m': { x: ['1月','2月','3月','4月','5月','6月'], y1: [820,932,901,934,1290,1330], y2: [700,800,850,900,1100,1200] },
   '3m': { x: ['4月','5月','6月'], y1: [934,1290,1330], y2: [900,1100,1200] }
@@ -470,13 +460,23 @@ scatterChart.setOption({
 
 1. 输出完整的 HTML 文件，从 <!DOCTYPE html> 到 </html>
 2. 所有 CSS 放在 <style> 标签内（包含上面完整的 CSS 框架）
-3. 所有 JS 放在页面底部的 <script> 标签内
-4. ECharts 必须从 CDN 加载（scripts 在 head 里: <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>）
+3. 在 <head> 末尾（ECharts CDN script 之后）必须紧跟一个 <script> 全局变量声明块：
+   示例（注意顺序，全局变量必须在组件 script 之前）：
+   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+   <script>
+   /* ── 全局共享变量（必须在所有组件脚本之前声明）── */
+   const DC_CHARTS = {}
+   const CHART_COLORS = ['#4F46E5','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899','#14B8A6']
+   const AXIS_STYLE = { axisLine:{lineStyle:{color:'#E2E8F0'}},axisTick:{show:false},axisLabel:{color:'#64748B',fontSize:11},splitLine:{lineStyle:{color:'#F1F5F9'}} }
+   const TOOLTIP_STYLE = { backgroundColor:'#1E293B',borderColor:'#334155',textStyle:{color:'#F1F5F9',fontSize:12},borderRadius:8,padding:[8,12] }
+   </script>
+   ⚠️ 这个全局声明块必须在所有内联组件 <script> 之前，否则组件脚本无法访问 DC_CHARTS 等变量。
+4. ECharts 必须从 CDN 加载（见规则3）
 5. 使用真实感的中文标签和数据（来自 Mock 数据）
 6. 布局使用 grid-12 系统，合理分配列宽
 7. 颜色统一使用 CSS 变量，不要硬编码颜色
-8. 每个 ECharts 实例用唯一 ID，页面底部统一初始化
-9. 窗口 resize 时调用所有图表的 resize()：window.addEventListener('resize', ()=>{ allCharts.forEach(c=>c.resize()) })
+8. 每个 ECharts 实例用唯一 ID，在其所在组件的 dc:end 注释前的 <script> 中初始化并注册到 DC_CHARTS
+9. 窗口 resize 时调用所有图表的 resize()：window.addEventListener('resize', ()=>{ Object.values(DC_CHARTS).forEach(c=>c.resize()) })
 10. 页面要美观、专业，不要过度拥挤，留白适当
 11. 标题区要有仪表板名称、副标题、时间显示
 12. 可以添加 hover 效果、动态数字动画等让页面更生动
@@ -552,9 +552,9 @@ salesTrendChart.setOption({
   background:rgba(255,255,255,0.78); animation:dc-pulse .5s ease-in-out forwards; }
 @keyframes dc-pulse { 0%{opacity:0} 40%{opacity:1} 100%{opacity:.85} }
 
-在页面 JS 末尾（window.addEventListener('resize',...) 之前）添加：
+在页面 body 末尾 <script> 块中（window.addEventListener('resize',...) 之前）添加 dcSwitch 联动函数：
+⚠️ DC_CHARTS 已在 <head> 中声明，此处不要重复声明。
 // DC Linkage Engine
-const DC_CHARTS = {}
 function dcSwitch(btn, variant) {
   const group = btn.closest('[data-controls]')
   if (!group) return
@@ -592,7 +592,12 @@ function dcSwitch(btn, variant) {
 ECharts 初始化时必须同时注册到 DC_CHARTS（示例）：
 const myChart = echarts.init(document.getElementById('hourlyFlow'))
 DC_CHARTS['hourlyFlow'] = myChart
-myChart.setOption({...})`
+myChart.setOption({...})
+
+⚠️ 严禁编写自定义的 updateKpi / updateChart / updateMetric 等更新函数。
+   所有受控组件的数据更新必须通过 dcSwitch(btn, variant) 完成，不要另立一套。
+⚠️ 非联动场景（没有 data-controlled-by 属性的 KPI 卡）不应调用任何 update 函数；
+   直接把数值写在 HTML 里即可，不要在 setInitialState 等初始化函数中调用 JSON.parse。`
 
 export const TEMPLATE_USER = (requirements: string, layout: string, mockData: string) => `
 需求分析：

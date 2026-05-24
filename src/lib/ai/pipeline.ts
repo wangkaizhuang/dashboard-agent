@@ -81,6 +81,10 @@ export async function runPipeline(
     previousOutputs[s.stepName] = s.content
   })
 
+  // Track the TEMPLATE_GENERATION score from this run so the template upsert
+  // records the actual score instead of falling back to 75 every time.
+  let liveTemplateScore = 75
+
   for (let i = startIndex; i < STEP_ORDER.length; i++) {
     const stepName = STEP_ORDER[i]
     const existingStep = cleanedSteps.find(s => s.stepName === stepName)
@@ -150,6 +154,7 @@ export async function runPipeline(
         data: { status: 'COMPLETED', content, score, ...(reasoning ? { reasoning } : {}) }
       })
       previousOutputs[stepName] = content
+      if (stepName === 'TEMPLATE_GENERATION') liveTemplateScore = score
       send({ type: 'step_complete', stepIndex: i })
 
     } catch (err) {
@@ -165,8 +170,13 @@ export async function runPipeline(
   }
 
   const htmlContent = previousOutputs['TEMPLATE_GENERATION'] || ''
-  const templateStep = cleanedSteps.find(s => s.stepName === 'TEMPLATE_GENERATION' && s.status === 'COMPLETED')
-  const templateScore = typeof templateStep?.score === 'number' ? templateStep.score : 75
+  // Use the score captured live during this run; fall back to any previously-
+  // completed step score for resumed pipelines where this run didn't re-run
+  // TEMPLATE_GENERATION (i.e. it was already COMPLETED from a prior attempt).
+  const resumedStep = cleanedSteps.find(s => s.stepName === 'TEMPLATE_GENERATION' && s.status === 'COMPLETED')
+  const templateScore = liveTemplateScore !== 75
+    ? liveTemplateScore
+    : (typeof resumedStep?.score === 'number' ? resumedStep.score : 75)
 
   // Build component registry from layout planning output
   let componentRegistry: ComponentRegistryItem[] = []
@@ -256,18 +266,26 @@ export async function runPipeline(
   // Notify client to switch preview panel to the generated template
   send({ type: 'template_ready', templateId: template.id })
 
-  // ── Persist TEMPLATE_CARD ─────────────────────────────────────────────────
+  // ── Persist TEMPLATE_CARD (at most one per session) ──────────────────────
   // Must be saved BEFORE pipeline_complete because that event triggers
   // loadSession() which reads messages from DB.
-  await prisma.message.create({
-    data: {
-      sessionId,
-      role: 'ASSISTANT',
-      content: '',
-      type: 'TEMPLATE_CARD',
-      metadata: { templateId: template.id },
-    }
+  // On repeated full-regen runs for the same session the template is upserted
+  // (same ID) so we only need one TEMPLATE_CARD message; skip creation if it
+  // already exists.
+  const existingCard = await prisma.message.findFirst({
+    where: { sessionId, type: 'TEMPLATE_CARD' },
   })
+  if (!existingCard) {
+    await prisma.message.create({
+      data: {
+        sessionId,
+        role: 'ASSISTANT',
+        content: '',
+        type: 'TEMPLATE_CARD',
+        metadata: { templateId: template.id },
+      }
+    })
+  }
 
   send({ type: 'pipeline_complete' })
 }

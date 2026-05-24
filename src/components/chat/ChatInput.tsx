@@ -56,11 +56,20 @@ export function ChatInput({
   onAnnotationRemove,
 }: ChatInputProps) {
   const [value, setValue] = useState('')
+  const [hint, setHint] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleSend = () => {
     const content = value.trim()
     if (!content || disabled) return
+    // Soft validation: first-time messages (no annotations) that are extremely
+    // short are almost certainly not real dashboard requests.
+    if (content.length < 8 && annotations.length === 0) {
+      setHint('请描述您需要什么样的仪表板，例如："创建一个电商销售数据仪表板，包含销售额、订单量等指标"')
+      setTimeout(() => setHint(''), 4000)
+      return
+    }
+    setHint('')
     onSend(content)
     setValue('')
     if (textareaRef.current) {
@@ -123,6 +132,11 @@ export function ChatInput({
           {disabled ? <Loader2 size={15} className="animate-spin" /> : <SendHorizonal size={15} />}
         </button>
       </div>
+
+      {/* Input hint (shown when message is too short) */}
+      {hint && (
+        <p className="mt-1 text-xs text-amber-600 px-1">{hint}</p>
+      )}
 
       {/* Annotation chips — shown when at least one component is annotated */}
       {annotations.length > 0 && (

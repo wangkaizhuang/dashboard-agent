@@ -13,7 +13,15 @@ const MIN_PREVIEW_WIDTH = 320
 const DEFAULT_PREVIEW_WIDTH = 380
 
 export function AppShell({ sessionId }: { sessionId: string }) {
-  const [sessions, setSessions] = useState<Session[]>([])
+  // Seed from localStorage so the sidebar is never empty on first render even
+  // before the /api/sessions response arrives (avoids "还没有对话" flash).
+  const [sessions, setSessions] = useState<Session[]>(() => {
+    if (typeof window === 'undefined') return []
+    try {
+      const cached = localStorage.getItem('cachedSessions')
+      return cached ? (JSON.parse(cached) as Session[]) : []
+    } catch { return [] }
+  })
   const [rightView, setRightView] = useState<'progress' | 'preview'>('progress')
   const [configOpen, setConfigOpen] = useState(false)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
@@ -54,7 +62,14 @@ export function AppShell({ sessionId }: { sessionId: string }) {
   }, [])
 
   const refreshSessions = useCallback(() => {
-    fetch('/api/sessions').then(r => r.json()).then(setSessions).catch(console.error)
+    fetch('/api/sessions')
+      .then(r => r.json())
+      .then((data: Session[]) => {
+        setSessions(data)
+        // Persist so the next AppShell mount has instant data
+        try { localStorage.setItem('cachedSessions', JSON.stringify(data)) } catch { /* ignore */ }
+      })
+      .catch(console.error)
   }, [])
 
   useEffect(() => { refreshSessions() }, [refreshSessions])

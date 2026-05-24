@@ -95,7 +95,7 @@ export function Sidebar({
           <button
             onClick={onToggleCollapse}
             className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center text-white text-xs font-bold hover:bg-indigo-400 transition-colors"
-            title="展开侧边栏"
+            title="Dashboard Agent"
           >
             D
           </button>

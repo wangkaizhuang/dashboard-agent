@@ -39,6 +39,14 @@ export function ChatPanel({
   // Always-current ref for sendMessage so it can be called from effects / timeouts
   const sendMessageRef = useRef<(content: string, modeOverride?: Mode) => Promise<void>>()
 
+  // Always-current ref for onTemplateReady — prevents stale-closure bugs in loadSession
+  const onTemplateReadyRef = useRef(onTemplateReady)
+  useEffect(() => { onTemplateReadyRef.current = onTemplateReady })
+
+  // AbortController for the active SSE stream — cancelled when sessionId changes
+  // so events from a previous pipeline don't bleed into a newly-loaded session.
+  const sseAbortRef = useRef<AbortController | null>(null)
+
   const loadSession = useCallback(async () => {
     if (sessionId === 'new') return
     try {
@@ -63,6 +71,9 @@ export function ChatPanel({
           const hasTemplate = prev.some(m => m.type === 'TEMPLATE_CARD')
           return hasTemplate ? prev : [...(session.messages || []), templateMsg]
         })
+        // Notify parent so the right panel restores its Preview state (e.g. on page reload
+        // or session switch) even though no SSE template_ready event fires in this path.
+        onTemplateReadyRef.current(session.template.id)
       }
     } catch (err) {
       console.error('Failed to load session:', err)
@@ -76,6 +87,11 @@ export function ChatPanel({
 
   // Initialize when sessionId changes
   useEffect(() => {
+    // Cancel any in-flight SSE stream from the previous session so its events
+    // don't bleed into the newly-selected session's UI state.
+    sseAbortRef.current?.abort()
+    sseAbortRef.current = null
+
     if (sessionId === 'new') {
       // Draft state — show empty UI, reset pipeline
       setMessages([])
@@ -157,10 +173,16 @@ export function ChatPanel({
     setRunning(true)
 
     try {
+      // Create a new AbortController for this SSE stream. The previous one (if any)
+      // was already aborted by the sessionId-change effect or a prior send.
+      const controller = new AbortController()
+      sseAbortRef.current = controller
+
       const response = await fetch(`/api/sessions/${sessionId}/messages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content, mode, annotations }),
+        signal: controller.signal,
       })
       // Clear annotation chips immediately after send
       onAnnotationClear?.()
@@ -249,6 +271,8 @@ export function ChatPanel({
         }
       }
     } catch (err) {
+      // AbortError means the user navigated away — silently stop without UI updates
+      if ((err as Error).name === 'AbortError') return
       console.error('Pipeline error:', err)
       stopLoading()
       await loadSession()

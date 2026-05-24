@@ -42,13 +42,12 @@ export function ProgressPanel({
   const completedSteps = steps.filter(s => s.status === 'COMPLETED').length
   const totalSteps = steps.length
 
-  /** Reusable annotation toggle button — compact (icon-only) or full (icon + label) */
-  const AnnotationToggle = ({ compact = false }: { compact?: boolean }) => (
+  /** Annotation toggle button — used only in the fullscreen overlay header */
+  const AnnotationToggle = () => (
     <button
       onClick={() => setAnnotationMode(m => !m)}
       className={cn(
-        'flex items-center gap-1 rounded-lg text-xs font-medium transition-colors',
-        compact ? 'px-2 py-1' : 'px-2.5 py-1.5',
+        'flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors',
         annotationMode
           ? 'bg-indigo-100 text-indigo-700'
           : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
@@ -56,7 +55,7 @@ export function ProgressPanel({
       title={annotationMode ? '退出注释模式' : '悬停组件添加注释'}
     >
       <Pencil size={11} />
-      {!compact && <span>{annotationMode ? '退出注释' : '注释'}</span>}
+      <span>{annotationMode ? '退出注释' : '注释'}</span>
       {annotations.length > 0 && (
         <span className="ml-0.5 px-1 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] leading-none">
           {annotations.length}

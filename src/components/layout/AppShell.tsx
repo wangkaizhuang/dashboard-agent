@@ -13,15 +13,10 @@ const MIN_PREVIEW_WIDTH = 320
 const DEFAULT_PREVIEW_WIDTH = 380
 
 export function AppShell({ sessionId }: { sessionId: string }) {
-  // Seed from localStorage so the sidebar is never empty on first render even
-  // before the /api/sessions response arrives (avoids "还没有对话" flash).
-  const [sessions, setSessions] = useState<Session[]>(() => {
-    if (typeof window === 'undefined') return []
-    try {
-      const cached = localStorage.getItem('cachedSessions')
-      return cached ? (JSON.parse(cached) as Session[]) : []
-    } catch { return [] }
-  })
+  // Always start with [] to avoid SSR/hydration mismatch.
+  // Seed from localStorage in a useEffect (after hydration) so the sidebar
+  // is never empty while the /api/sessions fetch is in-flight.
+  const [sessions, setSessions] = useState<Session[]>([])
   const [rightView, setRightView] = useState<'progress' | 'preview'>('progress')
   const [configOpen, setConfigOpen] = useState(false)
   const [previewTemplateId, setPreviewTemplateId] = useState<string | null>(null)
@@ -43,6 +38,12 @@ export function AppShell({ sessionId }: { sessionId: string }) {
 
   // ── Restore persisted layout on mount ──────────────────────────────────
   useEffect(() => {
+    // Seed session list from cache so sidebar isn't empty during API fetch
+    try {
+      const cached = localStorage.getItem('cachedSessions')
+      if (cached) setSessions(JSON.parse(cached) as Session[])
+    } catch { /* ignore */ }
+
     const collapsed = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
     if (collapsed !== null) setSidebarCollapsed(collapsed === 'true')
 

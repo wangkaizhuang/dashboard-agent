@@ -120,3 +120,38 @@ export function injectDcTracker(html: string): string {
   }
   return html + DC_TRACKER_SCRIPT
 }
+
+/**
+ * Ensure DC_CHARTS and chart-config globals are available before any inline
+ * component <script> executes.
+ *
+ * Old templates declare `const DC_CHARTS = {}` at the page bottom (too late —
+ * inline component scripts try to register to DC_CHARTS before it exists).
+ * New templates (after prompt fix) put it in <head>.
+ *
+ * This function:
+ *  1. Injects `window.DC_CHARTS = window.DC_CHARTS || {}` (and related globals)
+ *     into <head> so they're available from the very first inline script.
+ *  2. Replaces the bottom-of-page `const DC_CHARTS = {}` with a no-op comment
+ *     so `const` doesn't conflict with the already-set window property.
+ */
+export function patchTemplateGlobals(html: string): string {
+  const GLOBAL_PATCH = `<script>
+/* ── Pre-declare chart globals so inline component scripts can access them ── */
+if(typeof DC_CHARTS==='undefined')window.DC_CHARTS={}
+if(typeof CHART_COLORS==='undefined')window.CHART_COLORS=['#4F46E5','#10B981','#F59E0B','#EF4444','#3B82F6','#8B5CF6','#EC4899','#14B8A6']
+if(typeof AXIS_STYLE==='undefined')window.AXIS_STYLE={axisLine:{lineStyle:{color:'#E2E8F0'}},axisTick:{show:false},axisLabel:{color:'#64748B',fontSize:11},splitLine:{lineStyle:{color:'#F1F5F9'}}}
+if(typeof TOOLTIP_STYLE==='undefined')window.TOOLTIP_STYLE={backgroundColor:'#1E293B',borderColor:'#334155',textStyle:{color:'#F1F5F9',fontSize:12},borderRadius:8,padding:[8,12]}
+<\/script>`
+
+  // 1. Inject globals into <head>
+  let patched = html.includes('</head>')
+    ? html.replace('</head>', GLOBAL_PATCH + '\n</head>')
+    : GLOBAL_PATCH + html
+
+  // 2. Remove the late `const DC_CHARTS = {}` declaration so it doesn't conflict.
+  //    dcSwitch and other bottom-script functions will use window.DC_CHARTS instead.
+  patched = patched.replace(/const\s+DC_CHARTS\s*=\s*\{\}/g, '/* DC_CHARTS pre-declared in head */')
+
+  return patched
+}

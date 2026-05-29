@@ -54,6 +54,8 @@ export function ChatPanel({
       if (!res.ok) return
       const session = await res.json()
       setMessages(session.messages || [])
+      // Update browser tab title with the session title
+      if (session.title) document.title = `${session.title} — Dashboard Agent`
       // Sync mode selector to what the session has in DB
       if (session.mode) setSelectedMode(session.mode as Mode)
       // If session already has a completed template, inject the card
@@ -98,6 +100,7 @@ export function ChatPanel({
       setIsLoading(false)
       setRunning(false)
       initPipeline('new')
+      document.title = 'Dashboard Agent'
       return
     }
 
@@ -305,6 +308,7 @@ export function ChatPanel({
       />
 
       <ChatInput
+        key={sessionId}
         onSend={content => sendMessage(content)}
         disabled={isLoading}
         selectedMode={selectedMode}

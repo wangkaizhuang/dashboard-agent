@@ -120,9 +120,10 @@ describe('ChatInput — send behavior', () => {
   it('Enter key sends message', async () => {
     render(<ChatInput {...defaultProps} />)
     const textarea = screen.getByRole('textbox')
-    await userEvent.type(textarea, 'hello')
+    // Must be ≥8 chars to pass the minimum-length validation added to handleSend
+    await userEvent.type(textarea, 'hello world')
     await userEvent.keyboard('{Enter}')
-    expect(defaultProps.onSend).toHaveBeenCalledWith('hello')
+    expect(defaultProps.onSend).toHaveBeenCalledWith('hello world')
   })
 
   it('Shift+Enter does NOT send (inserts newline)', async () => {

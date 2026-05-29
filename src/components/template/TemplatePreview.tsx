@@ -117,6 +117,10 @@ export function TemplatePreview({
     const handler = (e: MessageEvent) => {
       const iframe = iframeRef.current
       if (!iframe) return
+      // Only handle messages originating from THIS specific iframe — prevents the
+      // normal and fullscreen TemplatePreview instances from cross-firing each
+      // other's events when both are mounted simultaneously (e.g. fullscreen mode).
+      if (e.source !== iframe.contentWindow) return
       const r = iframe.getBoundingClientRect()
 
       if (e.data?.type === 'dc:hover' && !locked) {

@@ -3,6 +3,19 @@ import type { SSEEvent, StepName } from '@/types'
 
 type SendFn = (event: SSEEvent) => void
 
+// Per-step token budgets for THINK mode. These are larger than QUICK mode's
+// because the <thinking> reasoning block is emitted BEFORE the final answer and
+// consumes part of the budget. MOCK_DATA (JSON datasets) and TEMPLATE_GENERATION
+// (full HTML) need ample headroom so the actual output isn't truncated by the
+// preceding reasoning.
+const STEP_MAX_TOKENS: Record<StepName, number> = {
+  REQUIREMENTS_ANALYSIS: 4000,
+  THOUGHT_BREAKDOWN: 4000,
+  LAYOUT_PLANNING: 4000,
+  MOCK_DATA: 8000,
+  TEMPLATE_GENERATION: 12000,
+}
+
 // Think mode wraps each step with explicit reasoning
 // Returns [content, reasoning]
 export async function runThinkStep(
@@ -24,7 +37,7 @@ export async function runThinkStep(
       { role: 'user', content: userPrompt }
     ],
     stream: true,
-    max_tokens: 4000,
+    max_tokens: STEP_MAX_TOKENS[stepName],
   })
 
   for await (const chunk of stream) {

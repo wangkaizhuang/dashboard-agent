@@ -8,6 +8,19 @@ import type { SSEEvent, StepName } from '@/types'
 
 type SendFn = (event: SSEEvent) => void
 
+// Per-step output token budgets. MOCK_DATA must emit JSON datasets for every
+// chart/KPI on the dashboard (trend series, rankings, funnels…), which easily
+// exceeds 2000 tokens — too low a budget truncates the JSON mid-array (e.g. at
+// "top5ProductRanking"), producing invalid data that fails the quality gate and
+// stalls the pipeline. TEMPLATE_GENERATION emits the full HTML document.
+const STEP_MAX_TOKENS: Record<StepName, number> = {
+  REQUIREMENTS_ANALYSIS: 2000,
+  THOUGHT_BREAKDOWN: 2000,
+  LAYOUT_PLANNING: 2000,
+  MOCK_DATA: 6000,
+  TEMPLATE_GENERATION: 8000,
+}
+
 interface StepInput {
   stepIndex: number
   stepName: StepName
@@ -59,7 +72,7 @@ export async function runQuickStep(input: StepInput, send: SendFn): Promise<stri
       { role: 'user', content: userPrompt }
     ],
     stream: true,
-    max_tokens: stepName === 'TEMPLATE_GENERATION' ? 8000 : 2000,
+    max_tokens: STEP_MAX_TOKENS[stepName],
   })
 
   for await (const chunk of stream) {

@@ -42,3 +42,6 @@ prisma/migrations/dev.db
 
 # runtime config overrides
 .runtime-config.json
+
+# Claude Code local settings (contains machine-specific paths)
+.claude/

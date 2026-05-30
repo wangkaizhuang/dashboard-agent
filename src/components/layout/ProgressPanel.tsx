@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LayoutDashboard, ListChecks, X, Pencil } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { PipelineProgress } from '@/components/progress/PipelineProgress'
@@ -38,6 +38,18 @@ export function ProgressPanel({
   // Lifted here so both the normal and fullscreen TemplatePreview share the same mode.
   // Entering fullscreen therefore keeps annotation mode active seamlessly.
   const [annotationMode, setAnnotationMode] = useState(false)
+
+  // Close the fullscreen overlay on Escape. The overlay is a custom fixed div
+  // (not the native Fullscreen API), so the browser won't dismiss it for us —
+  // we must handle the key ourselves. Only active while fullscreen is open.
+  useEffect(() => {
+    if (!isFullscreen) return
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsFullscreen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isFullscreen])
 
   const completedSteps = steps.filter(s => s.status === 'COMPLETED').length
   const totalSteps = steps.length

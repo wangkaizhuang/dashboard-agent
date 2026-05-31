@@ -1,0 +1,21 @@
+ecosystem.config.cjs
+  s_24f6c2b71ce34e::t_744784e5f772b3 1-19
+package.json
+  s_24f6c2b71ce34e::t_744784e5f772b3 7-12
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "9f4e79eb37342e6bbd5c700462818d013d50bd41",
+  "prompts": {},
+  "sessions": {
+    "s_24f6c2b71ce34e": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e7e95-f627-7833-b734-e89afa370ca5",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

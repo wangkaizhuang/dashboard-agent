@@ -68,6 +68,38 @@ docker compose up -d --build
 - MySQL：容器内 `db:3306`，数据持久化在 `mysql_data` 卷
 - 如需自定义模型/阈值，可在 shell 里 `export OPENAI_MODEL=... QUALITY_SCORE_THRESHOLD=...` 后再 `up`
 
+> 命令用的是 Docker Compose v2（`docker compose`，带空格）。老版本是 `docker-compose`（带连字符），二选一即可。
+
+### 常用 Docker 命令
+
+```bash
+# 构建并后台启动（首次 / 代码更新后）
+docker compose up -d --build
+
+# 查看容器状态
+docker compose ps
+
+# 跟随查看日志
+docker compose logs -f app        # 应用日志
+docker compose logs -f db         # 数据库日志
+
+# 重启 / 停止
+docker compose restart app        # 只重启应用
+docker compose down               # 停止并移除容器（保留数据卷 mysql_data）
+docker compose down -v            # ⚠️ 连数据卷一起删（会清空数据库）
+
+# 代码更新后重新部署
+git pull origin main
+docker compose up -d --build app  # 只重建应用容器，db 不动
+
+# 进入容器排查
+docker compose exec app sh        # 进入应用容器
+docker compose exec db mysql -uroot -p123456789 agent-explore   # 进入数据库
+
+# 在容器内跑 Prisma（一般启动时已自动迁移，手动补跑用）
+docker compose exec app npx prisma migrate deploy
+```
+
 ## 常用脚本
 
 | 命令 | 说明 |

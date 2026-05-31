@@ -6,10 +6,12 @@ export async function GET() {
   const cfg = getRuntimeConfig()
   return NextResponse.json({
     model: cfg.model,
+    reasoningModel: cfg.reasoningModel,
     baseUrl: cfg.baseUrl,
     // Never expose apiKey in GET — return masked version
     apiKeyMasked: cfg.apiKey ? `${cfg.apiKey.slice(0, 8)}...${cfg.apiKey.slice(-4)}` : '',
     contextMaxTokens: cfg.contextMaxTokens,
+    contextKeepRecent: cfg.contextKeepRecent,
     qualityScoreThreshold: cfg.qualityScoreThreshold,
     stepThresholds: cfg.stepThresholds ?? {},
   })
@@ -20,9 +22,11 @@ export async function POST(request: Request) {
   // Only update fields that are present and non-empty
   const updates: Partial<RuntimeConfig> = {}
   if (body.model) updates.model = body.model
+  if (body.reasoningModel) updates.reasoningModel = body.reasoningModel
   if (body.baseUrl) updates.baseUrl = body.baseUrl
   if (body.apiKey && body.apiKey !== '***masked***') updates.apiKey = body.apiKey
   if (typeof body.contextMaxTokens === 'number') updates.contextMaxTokens = body.contextMaxTokens
+  if (typeof body.contextKeepRecent === 'number') updates.contextKeepRecent = body.contextKeepRecent
   if (typeof body.qualityScoreThreshold === 'number') updates.qualityScoreThreshold = body.qualityScoreThreshold
   if (body.stepThresholds && typeof body.stepThresholds === 'object') updates.stepThresholds = body.stepThresholds
   setRuntimeConfig(updates)

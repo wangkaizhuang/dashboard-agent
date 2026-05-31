@@ -28,6 +28,10 @@ export function ChatPanel({
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  // Whether the initial history fetch for a real session has resolved. Gates the
+  // empty-state: a real session shows a loading indicator until this is true,
+  // instead of the (misleading) new-session CTA.
+  const [sessionLoaded, setSessionLoaded] = useState(false)
   const [selectedMode, setSelectedMode] = useState<Mode>('QUICK')
   const { handleSSEEvent, initPipeline, loadStepsFromDB, setRunning } = usePipelineStore()
 
@@ -79,6 +83,10 @@ export function ChatPanel({
       }
     } catch (err) {
       console.error('Failed to load session:', err)
+    } finally {
+      // Mark the initial fetch as resolved (success or failure) so the empty-state
+      // stops showing the loading indicator / never shows the new-session CTA.
+      setSessionLoaded(true)
     }
   }, [sessionId])
 
@@ -93,6 +101,7 @@ export function ChatPanel({
     // don't bleed into the newly-selected session's UI state.
     sseAbortRef.current?.abort()
     sseAbortRef.current = null
+    setSessionLoaded(false)
 
     if (sessionId === 'new') {
       // Draft state — show empty UI, reset pipeline
@@ -199,6 +208,12 @@ export function ChatPanel({
       const decoder = new TextDecoder()
       let buffer = ''
       let streamDone = false
+      // Defer loadSession() until the stream closes ([DONE]). The server writes
+      // the SCORE_REPORT message in its `finally` block AFTER emitting
+      // pipeline_paused but BEFORE [DONE]; reloading on the event itself races
+      // that write and can drop the card on first load.
+      let needsReload = false
+      let needsTitle = false
 
       while (!streamDone) {
         const { done, value } = await reader.read()
@@ -263,16 +278,21 @@ export function ChatPanel({
             }
             if (event.type === 'pipeline_complete') {
               stopLoading()
-              onSessionTitleChange()
-              await loadSession()
+              needsTitle = true
+              needsReload = true
             }
             if (event.type === 'pipeline_paused') {
               stopLoading()
-              await loadSession()
+              needsReload = true
             }
           } catch { /* ignore malformed SSE lines */ }
         }
       }
+
+      // Stream closed ([DONE]) — all server-side DB writes (including the
+      // SCORE_REPORT written in the route's finally block) are now committed.
+      if (needsTitle) onSessionTitleChange()
+      if (needsReload) await loadSession()
     } catch (err) {
       // AbortError means the user navigated away — silently stop without UI updates
       if ((err as Error).name === 'AbortError') return
@@ -303,6 +323,8 @@ export function ChatPanel({
       <MessageList
         messages={messages}
         isLoading={isLoading}
+        isNewSession={sessionId === 'new'}
+        sessionLoading={sessionId !== 'new' && !sessionLoaded}
         onTemplatePreview={onTemplateReady}
         onExpertAnswered={loadSession}
       />

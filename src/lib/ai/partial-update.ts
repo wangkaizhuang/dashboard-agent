@@ -163,8 +163,14 @@ export async function runPartialUpdate(
       const newHtml = htmlResp.choices[0]?.message?.content?.trim() || ''
       if (!newHtml) { failedComponents.push(componentId); continue }
 
-      // Strip any markdown code fences the AI may have added
-      const cleaned = newHtml.replace(/^```html?\n?/i, '').replace(/\n?```$/, '')
+      // Strip markdown code fences and any dc:start/end boundary markers the AI
+      // may have wrongly re-emitted (replaceComponentHtml keeps the outer markers;
+      // stray inner markers would corrupt future surgical replacements).
+      const cleaned = newHtml
+        .replace(/^```html?\n?/i, '')
+        .replace(/\n?```$/, '')
+        .replace(/<!-- dc:[^:]+:(start|end) -->\n?/g, '')
+        .trim()
       const { result, success } = replaceComponentHtml(currentHtml, componentId, cleaned)
       if (!success) { failedComponents.push(componentId); continue }
       currentHtml = result

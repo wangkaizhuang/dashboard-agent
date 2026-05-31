@@ -1,4 +1,4 @@
-import { getOpenAIClient, getModel } from '@/lib/ai/client'
+import { getOpenAIClient, getReasoningModel } from '@/lib/ai/client'
 import type { SSEEvent, StepName } from '@/types'
 
 type SendFn = (event: SSEEvent) => void
@@ -31,7 +31,7 @@ export async function runThinkStep(
   let rawBuffer = ''
 
   const stream = await getOpenAIClient().chat.completions.create({
-    model: getModel(),
+    model: getReasoningModel(),
     messages: [
       { role: 'system', content: thinkSystemPrompt },
       { role: 'user', content: userPrompt }
@@ -41,6 +41,19 @@ export async function runThinkStep(
   })
 
   for await (const chunk of stream) {
+    // Reasoning-capable models (deepseek-reasoner, o3, etc.) stream their
+    // chain-of-thought in a dedicated `reasoning_content`/`reasoning` delta
+    // field rather than inside <thinking> tags. Capture it natively when present.
+    // (Note: plain chat models like gpt-5.4-mini expose neither — for those,
+    // reasoning only appears if the model honors the <thinking> instruction.)
+    const reasoningDelta =
+      (chunk.choices[0]?.delta as { reasoning_content?: string; reasoning?: string })?.reasoning_content ??
+      (chunk.choices[0]?.delta as { reasoning_content?: string; reasoning?: string })?.reasoning
+    if (reasoningDelta) {
+      fullThinking += reasoningDelta
+      send({ type: 'step_thinking', stepIndex, delta: reasoningDelta })
+    }
+
     const delta = chunk.choices[0]?.delta?.content || ''
     if (!delta) continue
 

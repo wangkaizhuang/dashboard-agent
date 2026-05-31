@@ -39,6 +39,7 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
   const [customModel, setCustomModel] = useState('')
   const [showAdvanced, setShowAdvanced] = useState(false)
   const [stepThresholds, setStepThresholds] = useState<Partial<Record<StepName, number>>>({})
+  const [reasoningModel, setReasoningModel] = useState('deepseek-v4-flash')
 
   const isCustomModel = !PRESET_MODELS.some(m => m.id === selectedModel) || selectedModel === '__custom__'
 
@@ -57,8 +58,10 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
       if (cfg.baseUrl) setApiEndpoint(cfg.baseUrl)
       if (cfg.apiKeyMasked) setApiKey(cfg.apiKeyMasked)
       if (cfg.contextMaxTokens) setConfig(c => ({ ...c, contextMaxTokens: cfg.contextMaxTokens }))
+      if (typeof cfg.contextKeepRecent === 'number') setConfig(c => ({ ...c, contextKeepRecent: cfg.contextKeepRecent }))
       if (cfg.qualityScoreThreshold !== undefined) setConfig(c => ({ ...c, qualityScoreThreshold: cfg.qualityScoreThreshold }))
       if (cfg.stepThresholds) setStepThresholds(cfg.stepThresholds)
+      if (cfg.reasoningModel) setReasoningModel(cfg.reasoningModel)
     }).catch(() => {})
   }, [open])
 
@@ -69,9 +72,11 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model,
+        reasoningModel,
         baseUrl: apiEndpoint,
         ...(!apiKey.includes('...') && apiKey ? { apiKey } : {}),
         contextMaxTokens: config.contextMaxTokens,
+        contextKeepRecent: config.contextKeepRecent,
         qualityScoreThreshold: config.qualityScoreThreshold,
         stepThresholds,
       })
@@ -189,6 +194,30 @@ export function ConfigDrawer({ open, onClose }: ConfigDrawerProps) {
                       <button onClick={() => setShowKey(!showKey)} className="absolute right-3 top-2.5 text-gray-400">
                         {showKey ? <EyeOff size={15} /> : <Eye size={15} />}
                       </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm mb-1" style={{ color: 'var(--color-text-1)' }}>
+                      推理模型 <span className="text-xs" style={{ color: 'var(--color-text-2)' }}>（仅「深思」模式使用）</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {[
+                        { id: 'deepseek-v4-flash', label: 'DeepSeek V4 Flash', tag: '快' },
+                        { id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', tag: '深' },
+                      ].map(m => (
+                        <button
+                          key={m.id}
+                          onClick={() => setReasoningModel(m.id)}
+                          className={cn(
+                            'flex items-center justify-between p-2 rounded-lg border text-left transition-all',
+                            reasoningModel === m.id ? 'border-indigo-400 bg-indigo-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          )}
+                        >
+                          <span className={cn('text-xs font-semibold truncate', reasoningModel === m.id ? 'text-indigo-700' : 'text-slate-700')}>{m.label}</span>
+                          <span className="text-[10px] px-1 py-0.5 rounded font-medium bg-teal-100 text-teal-700 shrink-0">{m.tag}</span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>

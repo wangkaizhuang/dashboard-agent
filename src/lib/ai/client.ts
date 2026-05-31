@@ -14,3 +14,9 @@ export function getOpenAIClient(): OpenAI {
 export function getModel(): string {
   return getRuntimeConfig().model
 }
+
+/** Returns the reasoning model — used ONLY by THINK mode so its reasoning chain
+ *  (streamed as `reasoning_content`) is captured. Other modes use getModel(). */
+export function getReasoningModel(): string {
+  return getRuntimeConfig().reasoningModel
+}

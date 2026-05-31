@@ -69,10 +69,11 @@ export async function runPipeline(
     createdAt: m.createdAt.toISOString(),
     metadata: m.metadata as Record<string, unknown> | null | undefined,
   }))
+  const runtimeCfg = getRuntimeConfig()
   const contextMessages = await buildCompressedContext(
     mappedMessages,
-    getRuntimeConfig().contextMaxTokens,
-    10
+    runtimeCfg.contextMaxTokens,
+    runtimeCfg.contextKeepRecent
   )
   const history = contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')
 

@@ -477,9 +477,10 @@ scatterChart.setOption({
 7. 颜色统一使用 CSS 变量，不要硬编码颜色
 8. 每个 ECharts 实例用唯一 ID，在其所在组件的 dc:end 注释前的 <script> 中初始化并注册到 DC_CHARTS
 9. 窗口 resize 时调用所有图表的 resize()：window.addEventListener('resize', ()=>{ Object.values(DC_CHARTS).forEach(c=>c.resize()) })
-10. 页面要美观、专业，不要过度拥挤，留白适当
-11. 标题区要有仪表板名称、副标题、时间显示
-12. 可以添加 hover 效果、动态数字动画等让页面更生动
+10. 每个图表挂载 div 必须有明确高度（如 style="height:260px"，≥200px），禁止 height:0 或不写高度，否则图表会塌陷成空白卡片
+11. 页面要美观、专业，不要过度拥挤，留白适当
+12. 标题区要有仪表板名称、副标题、时间显示
+13. 可以添加 hover 效果、动态数字动画等让页面更生动
 
 ## 组件标记规范（必须严格遵守）
 
@@ -562,7 +563,9 @@ function dcSwitch(btn, variant) {
   btn.classList.add('active')
   const controlIds = group.dataset.controls.split(',').map(s => s.trim())
   controlIds.forEach(ctrlId => {
-    const el = document.querySelector('[data-controlled-by="' + ctrlId + '"]') ||
+    // data-controls lists the被控组件的 id（= 该组件的 data-dc 值）。
+    // 用 data-dc 精确定位（每个顶层组件都带 data-dc，保证可命中）。
+    const el = document.querySelector('[data-dc="' + ctrlId + '"]') ||
                document.getElementById(ctrlId)
     if (!el) return
     el.classList.add('dc-loading')

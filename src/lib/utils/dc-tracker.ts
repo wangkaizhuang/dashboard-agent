@@ -107,6 +107,81 @@ export const DC_TRACKER_SCRIPT = `
 <\/script>
 `
 
+/**
+ * Retroactively repair F3 linkage in templates generated before the dcSwitch
+ * prompt fix. Those templates' dcSwitch resolves a controlled component via
+ * `getElementById(ctrlId)`, but the component only carries `data-dc="<id>"`
+ * (no matching `id`), so the lookup fails and every filter click silently
+ * no-ops. We alias `id = data-dc` for any [data-dc] element lacking an id,
+ * which makes the existing getElementById fallback resolve.
+ *
+ * Harmless for new (post-fix) templates that query by [data-dc] directly.
+ */
+const DC_LINKAGE_FIX_SCRIPT = `
+<script id="dc-linkage-fix">
+(function(){
+  function aliasIds(){
+    document.querySelectorAll('[data-dc]').forEach(function(el){
+      if(el.id) return;
+      var v = el.getAttribute('data-dc');
+      if(v && !document.getElementById(v)) el.id = v;
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',aliasIds);
+  else aliasIds();
+})()
+<\/script>
+`
+
+/** Inject the linkage-repair shim just before </body>. */
+export function injectLinkageFix(html: string): string {
+  if (html.includes('</body>')) {
+    return html.replace('</body>', DC_LINKAGE_FIX_SCRIPT + '</body>')
+  }
+  return html + DC_LINKAGE_FIX_SCRIPT
+}
+
+/**
+ * Safety net for low-quality templates where a chart container div is rendered
+ * with zero height (the LLM forgot an explicit height), leaving a blank card.
+ * After charts initialize, any ECharts instance registered in DC_CHARTS whose
+ * mount node is visible but collapsed (<40px) gets a min-height + resize.
+ *
+ * Scoped to DC_CHARTS-registered nodes only, so it never touches legitimately
+ * hidden elements (e.g. inactive tab panels have offsetParent === null).
+ */
+const DC_CHART_HEIGHT_FIX_SCRIPT = `
+<script id="dc-chart-height-fix">
+(function(){
+  function fix(){
+    try{
+      var reg = window.DC_CHARTS || {};
+      Object.keys(reg).forEach(function(k){
+        var inst = reg[k];
+        var dom = inst && inst.getDom && inst.getDom();
+        if(!dom) return;
+        if(dom.offsetParent !== null && dom.clientHeight < 40){
+          dom.style.minHeight = '240px';
+          if(inst.resize) try{ inst.resize(); }catch(e){}
+        }
+      });
+    }catch(e){}
+  }
+  if(document.readyState==='complete') fix(); else window.addEventListener('load', fix);
+  setTimeout(fix, 800);
+  setTimeout(fix, 2200);
+})()
+<\/script>
+`
+
+/** Inject the collapsed-chart safety net just before </body>. */
+export function injectChartHeightFix(html: string): string {
+  if (html.includes('</body>')) {
+    return html.replace('</body>', DC_CHART_HEIGHT_FIX_SCRIPT + '</body>')
+  }
+  return html + DC_CHART_HEIGHT_FIX_SCRIPT
+}
+
 /** Remove <!-- dc:id:start --> and <!-- dc:id:end --> boundary comments from HTML.
  *  These are stored in the DB for surgical replacement but must not be visible to users. */
 export function stripDcMarkers(html: string): string {

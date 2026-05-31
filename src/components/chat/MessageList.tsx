@@ -7,11 +7,15 @@ import type { Message } from '@/types'
 interface MessageListProps {
   messages: Message[]
   isLoading: boolean
+  /** True only for the 'new' draft session — gates the "start designing" CTA. */
+  isNewSession?: boolean
+  /** True while a real session's initial history fetch is still in flight. */
+  sessionLoading?: boolean
   onTemplatePreview: (templateId: string) => void
   onExpertAnswered: () => void
 }
 
-export function MessageList({ messages, isLoading, onTemplatePreview, onExpertAnswered }: MessageListProps) {
+export function MessageList({ messages, isLoading, isNewSession = true, sessionLoading = false, onTemplatePreview, onExpertAnswered }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -20,7 +24,17 @@ export function MessageList({ messages, isLoading, onTemplatePreview, onExpertAn
 
   return (
     <div className="flex-1 overflow-y-auto py-4 space-y-1">
-      {messages.length === 0 && !isLoading && (
+      {/* Real session whose history is still loading — show a loading indicator,
+          NOT the new-session CTA (which would be misleading on a hard reload). */}
+      {messages.length === 0 && !isLoading && sessionLoading && (
+        <div className="h-full flex flex-col items-center justify-center text-center px-8">
+          <Loader2 size={20} className="animate-spin mb-2" style={{ color: 'var(--color-text-3)' }} />
+          <p className="text-sm" style={{ color: 'var(--color-text-2)' }}>加载中…</p>
+        </div>
+      )}
+
+      {/* New draft session with nothing yet — the "start designing" prompt. */}
+      {messages.length === 0 && !isLoading && !sessionLoading && isNewSession && (
         <div className="h-full flex flex-col items-center justify-center text-center px-8">
           <div
             className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4 text-2xl"

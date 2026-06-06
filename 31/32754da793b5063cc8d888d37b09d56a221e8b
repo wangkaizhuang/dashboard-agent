@@ -1,0 +1,35 @@
+src/app/api/sessions/[id]/messages/route.ts
+  s_12d312efdd9329::t_dd7d57de11ec6b 7-8
+README.md
+  s_12d312efdd9329::t_5fc397eb0edad8 50-65
+src/lib/ai/layout-cap.ts
+  s_12d312efdd9329::t_20a89605de35f0 1-42
+src/lib/ai/prompts/layout.ts
+  s_12d312efdd9329::t_3c2eb6605c9ae2 90
+  s_12d312efdd9329::t_ff081bd236222e 91
+  s_12d312efdd9329::t_e2b9fab6377e39 53
+src/__tests__/layout-cap.test.ts
+  s_12d312efdd9329::t_46095bcf15d55f 1-35
+src/lib/ai/pipeline.ts
+  s_12d312efdd9329::t_3f45fe21083d53 172-175
+  s_12d312efdd9329::t_ce271d9b500164 8
+CHANGELOG.md
+  s_12d312efdd9329::t_38692d08365499 9
+  s_12d312efdd9329::t_8725a16231dacd 7-8,10
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "3132754da793b5063cc8d888d37b09d56a221e8b",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

@@ -44,7 +44,13 @@ export const LAYOUT_SYSTEM = `你是一个仪表板布局专家。
       ]
     }
   ]
-}`
+}
+
+## 布局规则（务必遵守）
+- **每行组件的 span 之和应等于 12**（占满整行，避免右侧大片空白）。
+- **单个组件 span 最小为 3**：指标卡 span=3（一行放 4 个）；图表 span≥4（趋势类建议 6-8）；表格/列表 span≥4；告警横幅/标题可 span=12。
+- **严禁 span=1 或 span=2 的过窄组件**——会被挤压到无法阅读。
+- 组件数量适中（建议 12-20 个），按业务分组成多行，整体匀称不留大块空白。`
 
 export const LAYOUT_LINKAGE_RULES = `
 ## 组件联动规范（重要）
@@ -77,7 +83,11 @@ export const LAYOUT_LINKAGE_RULES = `
 }
 
 tabs 类型组件的 variants 对应每个 tab 的 key（如 ["overview","detail","ranking"]）。
-tabs 类型的 controls 列出内部子组件的 id。`
+tabs 类型的 controls 列出内部子组件的 id。
+
+⚠️ 关键要求：
+- 被控制组件（controls 列表 / 带 controlledBy 的组件）**必须同时包含相关的 metric_card（指标卡）和图表**——指标卡也要随筛选/标签联动变化，不能只联动图表。
+- 只要 dashboard 有时间/类别等维度，就应**至少放一个 date_filter / dropdown_filter / tabs 来驱动联动**，并确保它的 controls 不为空（筛选器必须真正控制组件，不能是摆设）。`
 
 export const LAYOUT_USER = (requirements: string, breakdown: string) => `
 需求：${requirements}

@@ -56,6 +56,13 @@ export const MOCKDATA_VARIANT_RULES = `
   }
 }
 
+❌ 严禁这样（各变体复制相同 value，点筛选后毫无变化、筛选器形同虚设）：
+{ "conversionRate": { "day": {"value":"32.1%"}, "week": {"value":"32.1%"}, "month": {"value":"32.1%"} } }
+✅ 必须这样（每个变体数值都不同）：
+{ "conversionRate": { "day": {"value":"28.6%","trend":"+1.1%"}, "week": {"value":"32.1%","trend":"+3.5%"}, "month": {"value":"39.4%","trend":"+8.2%"} } }
+
+再次强调：**每个带 controlledBy 的组件（图表 + 指标卡都算）都必须为全部 variants 生成数据，且各变体数值显著不同**。指标卡尤其不能偷懒复制同值。
+
 非联动组件（无 controlledBy）正常生成单份数据。`
 
 export const MOCKDATA_USER = (layout: string, requirements: string) => `

@@ -1,0 +1,28 @@
+src/components/chat/ExpertQuestionCard.tsx
+  s_12d312efdd9329::t_5d459d9e5df7b3 114-116
+src/components/layout/ProgressPanel.tsx
+  s_12d312efdd9329::t_4cd61ca972fe61 27-28
+  s_12d312efdd9329::t_387878532f7db8 42,51-54
+src/components/chat/MessageList.tsx
+  s_12d312efdd9329::t_1e6de8e90d9ed9 70-72
+src/components/layout/AppShell.tsx
+  s_12d312efdd9329::t_11e5d02d06ae7b 228
+  s_12d312efdd9329::t_c419950161ac9c 112
+  s_12d312efdd9329::t_eb07e993ea3df2 44-48
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "9949b5bccb786a13ac6b6b7e820bbbaea0ce359a",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

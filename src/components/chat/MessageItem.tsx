@@ -10,9 +10,11 @@ interface MessageItemProps {
   message: Message
   onTemplatePreview: (templateId: string) => void
   onExpertAnswered: () => void
+  expertIndex?: number
+  expertTotal?: number
 }
 
-export function MessageItem({ message, onTemplatePreview, onExpertAnswered }: MessageItemProps) {
+export function MessageItem({ message, onTemplatePreview, onExpertAnswered, expertIndex, expertTotal }: MessageItemProps) {
   const isUser = message.role === 'USER'
 
   if (message.type === 'TEMPLATE_CARD' && message.metadata?.templateId) {
@@ -29,7 +31,7 @@ export function MessageItem({ message, onTemplatePreview, onExpertAnswered }: Me
   if (message.type === 'EXPERT_QUESTION' && message.metadata) {
     const meta = message.metadata as unknown as ExpertQuestion
     return (
-      <div className="flex justify-start px-4 py-1">
+      <div className="flex justify-start px-4 py-1" data-eqid={meta.id}>
         <ExpertQuestionCard
           questionId={meta.id}
           question={meta.question}
@@ -37,6 +39,8 @@ export function MessageItem({ message, onTemplatePreview, onExpertAnswered }: Me
           onAnswered={onExpertAnswered}
           initialAnswered={meta.answered}
           initialAnswer={meta.answer ?? meta.customText ?? undefined}
+          index={expertIndex}
+          total={expertTotal}
         />
       </div>
     )

@@ -48,7 +48,7 @@ export function ScoreReportCard({ stepName, score, issues, threshold }: ScoreRep
             <MessageSquarePlus size={13} className="text-red-500 shrink-0 mt-0.5" />
             <p className="text-xs text-red-700 leading-snug">
               <span className="font-semibold">如何继续：</span>
-              在下方输入框中补充上述缺失信息，发送后流程将从当前步骤自动重新开始。
+              在下方输入框中针对上述问题补充信息，发送后将从「{STEP_LABELS[stepName as StepName] || stepName}」步骤自动重新生成。
             </p>
           </div>
         </div>

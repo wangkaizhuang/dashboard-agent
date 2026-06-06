@@ -24,12 +24,13 @@ describe('ScoreReportCard — rendering', () => {
 
   it('renders Chinese step label for known step names', () => {
     render(<ScoreReportCard {...defaultProps} />)
-    expect(screen.getByText(/布局规划/)).toBeInTheDocument()
+    // Label appears in both the header and the recovery CTA.
+    expect(screen.getAllByText(/布局规划/).length).toBeGreaterThan(0)
   })
 
   it('renders raw step name for unknown step names', () => {
     render(<ScoreReportCard {...defaultProps} stepName="UNKNOWN_STEP" />)
-    expect(screen.getByText(/UNKNOWN_STEP/)).toBeInTheDocument()
+    expect(screen.getAllByText(/UNKNOWN_STEP/).length).toBeGreaterThan(0)
   })
 
   it('displays score/threshold badge', () => {
@@ -50,7 +51,7 @@ describe('ScoreReportCard — rendering', () => {
 
   it('recovery CTA explains what to do', () => {
     render(<ScoreReportCard {...defaultProps} />)
-    expect(screen.getByText(/补充上述缺失信息/)).toBeInTheDocument()
+    expect(screen.getByText(/补充信息/)).toBeInTheDocument()
   })
 
   it('shows "生成质量不足" header', () => {
@@ -76,7 +77,7 @@ describe('ScoreReportCard — rendering', () => {
     ]
     for (const [stepName, expectedLabel] of stepsAndLabels) {
       const { unmount } = render(<ScoreReportCard {...defaultProps} stepName={stepName} />)
-      expect(screen.getByText(new RegExp(expectedLabel))).toBeInTheDocument()
+      expect(screen.getAllByText(new RegExp(expectedLabel)).length).toBeGreaterThan(0)
       unmount()
     }
   })

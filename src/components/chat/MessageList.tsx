@@ -17,13 +17,31 @@ interface MessageListProps {
 
 export function MessageList({ messages, isLoading, isNewSession = true, sessionLoading = false, onTemplatePreview, onExpertAnswered }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+
+  // Ordinal of each expert question within the current batch (for "问题 N/M").
+  const expertMsgs = messages.filter(m => m.type === 'EXPERT_QUESTION')
+  const expertTotal = expertMsgs.length
+  const expertOrdinal = new Map(expertMsgs.map((m, i) => [m.id, i + 1]))
 
   useEffect(() => {
+    // If there's an unanswered expert question, scroll to it (top-aligned) so the
+    // user starts reading from it — instead of jumping to the bottom and cutting
+    // off the first question. Otherwise scroll to the latest message.
+    const firstUnanswered = messages.find(
+      m => m.type === 'EXPERT_QUESTION' && !(m.metadata as { answered?: boolean } | null)?.answered
+    )
+    const eqId = firstUnanswered && (firstUnanswered.metadata as { id?: string } | null)?.id
+    const el = eqId && listRef.current?.querySelector(`[data-eqid="${eqId}"]`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isLoading])
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 space-y-1">
+    <div ref={listRef} className="flex-1 overflow-y-auto py-4 space-y-1">
       {/* Real session whose history is still loading — show a loading indicator,
           NOT the new-session CTA (which would be misleading on a hard reload). */}
       {messages.length === 0 && !isLoading && sessionLoading && (
@@ -57,6 +75,8 @@ export function MessageList({ messages, isLoading, isNewSession = true, sessionL
           message={msg}
           onTemplatePreview={onTemplatePreview}
           onExpertAnswered={onExpertAnswered}
+          expertIndex={msg.type === 'EXPERT_QUESTION' ? expertOrdinal.get(msg.id) : undefined}
+          expertTotal={msg.type === 'EXPERT_QUESTION' ? expertTotal : undefined}
         />
       ))}
 

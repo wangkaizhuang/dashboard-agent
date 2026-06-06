@@ -12,9 +12,12 @@ interface ExpertQuestionCardProps {
   onAnswered: () => void
   initialAnswered?: boolean
   initialAnswer?: string
+  /** 1-based position among the current batch of expert questions, and the total. */
+  index?: number
+  total?: number
 }
 
-export function ExpertQuestionCard({ questionId, question, options, onAnswered, initialAnswered, initialAnswer }: ExpertQuestionCardProps) {
+export function ExpertQuestionCard({ questionId, question, options, onAnswered, initialAnswered, initialAnswer, index, total }: ExpertQuestionCardProps) {
   const [selected, setSelected] = useState<string | null>(initialAnswer ?? null)
   const [customText, setCustomText] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -63,7 +66,9 @@ export function ExpertQuestionCard({ questionId, question, options, onAnswered, 
           <GraduationCap size={13} className="text-purple-600" />
         </div>
         <div>
-          <p className="text-xs text-purple-600 font-medium mb-0.5">专家模式 — 信息补充</p>
+          <p className="text-xs text-purple-600 font-medium mb-0.5">
+            专家模式 — 信息补充{total && total > 1 ? `（问题 ${index}/${total}）` : ''}
+          </p>
           <p className="text-sm font-medium" style={{ color: 'var(--color-text-1)' }}>{question}</p>
         </div>
       </div>

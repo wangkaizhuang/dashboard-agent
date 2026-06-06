@@ -47,6 +47,22 @@ npm run dev
 > 为省事，**推荐统一用 `.env`**（Prisma 和 Next 都能读到）；本地想覆盖某些值时再用 `.env.local`。
 > `.env` / `.env.local` 已在 `.gitignore` 中，不会进仓库。
 
+## ⚠️ 反向代理（nginx）务必放大 SSE 超时
+
+仪表板生成是**长连接 SSE**，复杂看板的模板生成可能流式输出数分钟。若 app 放在 **nginx 之后**，nginx 默认 `proxy_read_timeout 60s` 会**中途切断流**，导致生成"卡住/失败"。对应的 location 块需要：
+
+```nginx
+location / {
+    proxy_pass http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_read_timeout 600s;   # 允许长时间 SSE 生成
+    proxy_buffering off;        # 立即透传 SSE，不缓冲
+}
+```
+
+（直接裸跑 `npm run start` / `node` 无此限制；`maxDuration` 仅在 Vercel 生效。）
+
 ## 生产构建与启动
 
 ```bash

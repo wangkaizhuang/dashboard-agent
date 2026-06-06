@@ -4,6 +4,10 @@
 
 ## [未发布]
 
+### 修复 (Fixed)
+
+- **复杂仪表板（如"变形金刚各角色"）生成总是失败**：根因是延迟而非崩溃——5 步全部成功（评分 82-96），但 `TEMPLATE_GENERATION` 单步要 200-280s 流式输出大段 HTML，超过超时后 SSE 被切断、步骤卡在 RUNNING，下次发消息被判 FAILED/PAUSED，看起来"总是失败"且重发会循环。复杂主题（18 组件、11 个联动变体）更容易触顶。修复：`layout.ts` 提示词限制组件 ≤14；并**在代码中强制把受控(controlledBy)组件上限为 6**（`capLayoutLinkage`，因为模型不一定听提示词），从源头缩短 MOCK_DATA / 模板生成时间；`maxDuration` 提到 800s。**关键：自部署在 nginx 后必须调大 `proxy_read_timeout`（默认 60s 会中途切断 SSE）**——见 README「反向代理」章节。
+
 ### 新增 (Added)
 
 - **对话上下文分界 + 会话分叉**（见 `docs/superpowers/specs/2026-06-07-context-boundary-and-fork-design.md`）：

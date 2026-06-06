@@ -5,6 +5,7 @@ import { runQuickStep, buildStepPrompts } from './modes/quick'
 import { runThinkStep } from './modes/think'
 import { analyzeGaps, waitForExpertAnswers } from './modes/expert'
 import { detectRelated, waitForIntentChoice } from './intent'
+import { capLayoutLinkage } from './layout-cap'
 import { SCORING_SYSTEM, SCORING_USER } from './prompts/scoring'
 import { SUMMARY_SYSTEM, SUMMARY_USER } from './prompts/summary'
 import { runPartialUpdate } from './partial-update'
@@ -167,6 +168,10 @@ export async function runPipeline(
           content = await runQuickStep({ stepIndex: i, stepName, userInput, history, previousOutputs }, send)
         }
       }
+
+      // Enforce a linkage cap on the layout (the LLM doesn't reliably honor the
+      // prompt cap). Bounds MOCK_DATA size + TEMPLATE_GENERATION time/length.
+      if (stepName === 'LAYOUT_PLANNING') content = capLayoutLinkage(content)
 
       const scoreResp = await getOpenAIClient().chat.completions.create({
         model: getModel(),

@@ -4,7 +4,8 @@ import { runPipeline } from '@/lib/ai/pipeline'
 import { getRuntimeConfig } from '@/lib/config/runtime'
 import type { Mode, Annotation } from '@/types'
 
-export const maxDuration = 300 // 5 minute timeout
+export const maxDuration = 800 // TEMPLATE_GENERATION can stream for minutes; give headroom.
+                               // (Enforced only on Vercel; self-hosted Node has no function timeout.)
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   const { content, mode: requestedMode, annotations } = await request.json()

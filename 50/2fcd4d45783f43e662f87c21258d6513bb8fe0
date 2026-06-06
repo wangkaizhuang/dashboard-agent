@@ -1,0 +1,34 @@
+src/__tests__/score-report.test.tsx
+  s_12d312efdd9329::t_4ab177a1ab22c5 27-28,33
+  s_12d312efdd9329::t_c6f3ac9807123d 54
+  s_12d312efdd9329::t_8ef4c7b769934f 80
+src/components/chat/ExpertQuestionCard.tsx
+  s_12d312efdd9329::t_f2608f8cd5c6b8 69-71
+  s_12d312efdd9329::t_275a33a43ed2b0 15-17,20
+CHANGELOG.md
+  s_12d312efdd9329::t_c8a393b1a68fb5 11-12
+src/components/chat/MessageList.tsx
+  s_12d312efdd9329::t_e2587a2464a6ce 20-25,28-39,44
+  s_12d312efdd9329::t_f305964d2df948 78-79
+src/components/chat/MessageItem.tsx
+  s_12d312efdd9329::t_977371dc4666d1 34,42-43
+  s_12d312efdd9329::t_2ba5a8291f31de 13-14,17
+src/components/chat/ScoreReportCard.tsx
+  s_12d312efdd9329::t_51dd3716b20967 51
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "502fcd4d45783f43e662f87c21258d6513bb8fe0",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

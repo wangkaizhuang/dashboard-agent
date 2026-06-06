@@ -1,0 +1,24 @@
+src/lib/ai/prompts/mockdata.ts
+  s_12d312efdd9329::t_5a1187edbe3b5e 59-65
+CHANGELOG.md
+  s_12d312efdd9329::t_79901b9e839fa1 5-11
+src/lib/ai/prompts/layout.ts
+  s_12d312efdd9329::t_1c85af0375e646 86-90
+  s_12d312efdd9329::t_fb32be257a26ce 47-53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "32505bb9eff9ba989201f7280b77757362abf9f4",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

@@ -113,6 +113,14 @@ export async function runPipeline(
       } else if (mode === 'THINK') {
         const { systemPrompt, userPrompt } = buildStepPrompts(stepName, userInput, history, previousOutputs)
         ;[content, reasoning] = await runThinkStep(i, stepName, systemPrompt, userPrompt, send)
+        // A reasoning model can occasionally spend its entire token budget on the
+        // <thinking>/reasoning stream and emit an EMPTY answer (observed on large
+        // steps like MOCK_DATA). That empty output would score 0 and wrongly stall
+        // the pipeline. Fall back to a plain (non-reasoning) call so the step still
+        // produces real content instead of failing.
+        if (!content.trim()) {
+          content = await runQuickStep({ stepIndex: i, stepName, userInput, history, previousOutputs }, send)
+        }
       }
 
       const scoreResp = await getOpenAIClient().chat.completions.create({
@@ -129,8 +137,10 @@ export async function runPipeline(
       let issues: string[] = []
       try {
         const scored = JSON.parse(scoreResp.choices[0]?.message?.content || '{"score":75}')
-        score = scored.score || 75
-        issues = scored.issues || []
+        // Use a strict number check (not `|| 75`) so a legitimate low score isn't
+        // silently turned into 75 — and clamp to 0-100 against malformed values.
+        score = typeof scored.score === 'number' ? Math.max(0, Math.min(100, scored.score)) : 75
+        issues = Array.isArray(scored.issues) ? scored.issues : []
       } catch { /* use defaults */ }
 
       send({ type: 'step_score', stepIndex: i, score })

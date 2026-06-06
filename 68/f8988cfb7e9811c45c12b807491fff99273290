@@ -1,0 +1,34 @@
+src/components/layout/ChatPanel.tsx
+  s_12d312efdd9329::t_ee7a622869e194 321,324-334,341-348
+  s_12d312efdd9329::t_09d5faa6863f74 12,18-21,32-33
+  s_12d312efdd9329::t_cd221ab65d4171 89-91
+  s_12d312efdd9329::t_f6f583f0c24cea 4
+  s_12d312efdd9329::t_27f6a171213619 286
+src/components/layout/AppShell.tsx
+  s_12d312efdd9329::t_b41a46ce3c2cb9 174-178,180-187,190-192,195-222
+src/components/layout/ProgressPanel.tsx
+  s_12d312efdd9329::t_ddfa837a99dc2c 247
+src/components/chat/ChatInput.tsx
+  s_12d312efdd9329::t_aa573d4f6de637 188
+src/components/layout/Sidebar.tsx
+  s_12d312efdd9329::t_260d4207b7d077 201
+src/components/template/TemplatePreview.tsx
+  s_12d312efdd9329::t_e663bfb111cb66 254,256
+  s_12d312efdd9329::t_73ee7b63dec500 263-264
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.2",
+  "base_commit_sha": "68f8988cfb7e9811c45c12b807491fff99273290",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

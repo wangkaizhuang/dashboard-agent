@@ -1,0 +1,23 @@
+src/components/layout/ChatPanel.tsx
+  s_12d312efdd9329::t_989fb7746ec8cf 5
+  s_12d312efdd9329::t_38bd055fb381c7 310-311
+src/components/chat/ChatInput.tsx
+  s_12d312efdd9329::t_2f4a447bcc093a 63-70
+  s_12d312efdd9329::t_1e4179400386f3 131,134
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "150c894acc2b5e230c50db68463489ee5c25c240",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

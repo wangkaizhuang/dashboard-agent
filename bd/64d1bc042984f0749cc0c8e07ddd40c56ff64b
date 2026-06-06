@@ -1,0 +1,19 @@
+docs/superpowers/specs/2026-06-07-context-boundary-and-fork-design.md
+  s_12d312efdd9329::t_35487e0a88b73e 1-107
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "bd64d1bc042984f0749cc0c8e07ddd40c56ff64b",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

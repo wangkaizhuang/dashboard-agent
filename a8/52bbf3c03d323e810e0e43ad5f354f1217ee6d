@@ -1,0 +1,21 @@
+CHANGELOG.md
+  s_12d312efdd9329::t_21ed9b7283e636 5
+package.json
+  s_12d312efdd9329::t_74eea8ded9b3fc 3
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "a852bbf3c03d323e810e0e43ad5f354f1217ee6d",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

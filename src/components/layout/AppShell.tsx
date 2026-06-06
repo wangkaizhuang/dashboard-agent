@@ -1,9 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Menu, ListChecks } from 'lucide-react'
 import { Sidebar } from './Sidebar'
 import { ChatPanel } from './ChatPanel'
 import { ProgressPanel } from './ProgressPanel'
 import { ConfigDrawer } from '@/components/settings/ConfigDrawer'
+import { cn } from '@/lib/utils'
 import type { Session, Annotation } from '@/types'
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebarCollapsed'
@@ -35,6 +37,10 @@ export function AppShell({ sessionId }: { sessionId: string }) {
 
   // Annotation state — lifted so both ChatPanel (chips) and ProgressPanel (overlay) share it
   const [annotations, setAnnotations] = useState<Annotation[]>([])
+
+  // Mobile-only UI state (< md / < xl). Off-canvas sidebar + progress/preview sheet.
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
 
   // ── Restore persisted layout on mount ──────────────────────────────────
   useEffect(() => {
@@ -80,6 +86,8 @@ export function AppShell({ sessionId }: { sessionId: string }) {
     setPreviewTemplateId(null)
     setRightView('progress')
     setAnnotations([])
+    setMobileSidebarOpen(false)
+    setMobilePanelOpen(false)
   }, [sessionId])
 
   // ── Annotation handlers ─────────────────────────────────────────────────
@@ -128,58 +136,115 @@ export function AppShell({ sessionId }: { sessionId: string }) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar
-        sessions={sessions}
-        currentSessionId={sessionId}
-        onConfigOpen={() => setConfigOpen(true)}
-        onSessionsChange={refreshSessions}
-        collapsed={sidebarCollapsed}
-        onToggleCollapse={toggleSidebar}
-      />
-
-      <main className="flex-1 flex min-w-0 overflow-hidden" style={{ background: 'var(--color-bg)' }}>
-        {/* Chat panel — fills remaining space */}
-        <div className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ minWidth: MIN_CHAT_WIDTH }}>
-          <ChatPanel
-            sessionId={sessionId}
-            onTemplateReady={(templateId) => {
-              setPreviewTemplateId(templateId)
-              setPreviewVersion(v => v + 1)  // always increment to force iframe reload
-              setRightView('preview')
-            }}
-            onSessionTitleChange={refreshSessions}
-            onSessionCreated={refreshSessions}
-            annotations={annotations}
-            onAnnotationRemove={handleAnnotationRemove}
-            onAnnotationClear={handleAnnotationClear}
-          />
-        </div>
-
-        {/* Draggable divider — xl+ only (mirrors ProgressPanel's hidden xl:flex) */}
-        <div
-          className="hidden xl:flex shrink-0 items-center justify-center cursor-col-resize select-none"
-          style={{ width: '6px' }}
-          onPointerDown={handleDividerPointerDown}
-          onPointerMove={handleDividerPointerMove}
-          onPointerUp={handleDividerPointerUp}
-        >
-          <div
-            className="w-px h-8 rounded-full"
-            style={{ background: 'var(--color-border)' }}
-          />
-        </div>
-
-        <ProgressPanel
-          sessionId={sessionId}
-          view={rightView}
-          templateId={previewTemplateId}
-          previewVersion={previewVersion}
-          onViewChange={setRightView}
-          width={previewWidth}
-          annotations={annotations}
-          onAnnotationAdd={handleAnnotationAdd}
-          onAnnotationRemove={handleAnnotationRemove}
+      {/* Sidebar — inline on desktop (md+) */}
+      <div className="hidden md:flex h-full">
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={sessionId}
+          onConfigOpen={() => setConfigOpen(true)}
+          onSessionsChange={refreshSessions}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={toggleSidebar}
         />
+      </div>
+
+      {/* Sidebar — off-canvas drawer on mobile (< md) */}
+      {mobileSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+      <div
+        className={cn(
+          'md:hidden fixed inset-y-0 left-0 z-50 transition-transform duration-200 ease-out',
+          mobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
+        <Sidebar
+          sessions={sessions}
+          currentSessionId={sessionId}
+          onConfigOpen={() => { setMobileSidebarOpen(false); setConfigOpen(true) }}
+          onSessionsChange={refreshSessions}
+          collapsed={false}
+          onToggleCollapse={() => setMobileSidebarOpen(false)}
+          onNavigate={() => setMobileSidebarOpen(false)}
+        />
+      </div>
+
+      <main className="flex-1 flex flex-col min-w-0 overflow-hidden" style={{ background: 'var(--color-bg)' }}>
+        {/* Mobile top bar (< md) — hamburger + 进度/预览 toggle */}
+        <div
+          className="md:hidden shrink-0 flex items-center gap-2 px-3 py-2 border-b"
+          style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
+        >
+          <button
+            onClick={() => setMobileSidebarOpen(true)}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+            style={{ color: 'var(--color-text-1)' }}
+            title="菜单"
+            aria-label="打开菜单"
+          >
+            <Menu size={18} />
+          </button>
+          <span className="text-sm font-semibold flex-1 truncate" style={{ color: 'var(--color-text-1)' }}>
+            Dashboard Agent
+          </span>
+          <button
+            onClick={() => setMobilePanelOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+          >
+            <ListChecks size={13} /> 进度/预览
+          </button>
+        </div>
+
+        <div className="flex-1 flex min-w-0 overflow-hidden">
+          {/* Chat panel — fills remaining space */}
+          <div className="flex-1 min-w-0 flex flex-col overflow-hidden" style={{ minWidth: MIN_CHAT_WIDTH }}>
+            <ChatPanel
+              sessionId={sessionId}
+              onTemplateReady={(templateId) => {
+                setPreviewTemplateId(templateId)
+                setPreviewVersion(v => v + 1)  // always increment to force iframe reload
+                setRightView('preview')
+                setMobilePanelOpen(true)       // surface the result on mobile (no-op on xl)
+              }}
+              onSessionTitleChange={refreshSessions}
+              onSessionCreated={refreshSessions}
+              annotations={annotations}
+              onAnnotationRemove={handleAnnotationRemove}
+              onAnnotationClear={handleAnnotationClear}
+            />
+          </div>
+
+          {/* Draggable divider — xl+ only (mirrors ProgressPanel's hidden xl:flex) */}
+          <div
+            className="hidden xl:flex shrink-0 items-center justify-center cursor-col-resize select-none"
+            style={{ width: '6px' }}
+            onPointerDown={handleDividerPointerDown}
+            onPointerMove={handleDividerPointerMove}
+            onPointerUp={handleDividerPointerUp}
+          >
+            <div
+              className="w-px h-8 rounded-full"
+              style={{ background: 'var(--color-border)' }}
+            />
+          </div>
+
+          <ProgressPanel
+            sessionId={sessionId}
+            view={rightView}
+            templateId={previewTemplateId}
+            previewVersion={previewVersion}
+            onViewChange={setRightView}
+            width={previewWidth}
+            annotations={annotations}
+            onAnnotationAdd={handleAnnotationAdd}
+            onAnnotationRemove={handleAnnotationRemove}
+            mobileSheetOpen={mobilePanelOpen}
+            onCloseMobileSheet={() => setMobilePanelOpen(false)}
+          />
+        </div>
       </main>
 
       <ConfigDrawer open={configOpen} onClose={() => setConfigOpen(false)} />

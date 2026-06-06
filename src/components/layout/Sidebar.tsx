@@ -12,6 +12,9 @@ interface SidebarProps {
   onSessionsChange: () => void
   collapsed: boolean
   onToggleCollapse: () => void
+  /** Called after any navigation (new chat / open session) — used to close the
+   *  off-canvas drawer on mobile. No-op on desktop. */
+  onNavigate?: () => void
 }
 
 export function Sidebar({
@@ -21,6 +24,7 @@ export function Sidebar({
   onSessionsChange,
   collapsed,
   onToggleCollapse,
+  onNavigate,
 }: SidebarProps) {
   const router = useRouter()
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null)
@@ -39,8 +43,14 @@ export function Sidebar({
   }, [pendingDeleteId])
 
   const handleNewChat = () => {
+    onNavigate?.()
     if (currentSessionId === 'new') return
     router.push('/chat/new')
+  }
+
+  const openSession = (id: string) => {
+    onNavigate?.()
+    router.push(`/chat/${id}`)
   }
 
   const handleDeleteClick = (e: React.MouseEvent, id: string) => {
@@ -186,7 +196,7 @@ export function Sidebar({
             {dateSessions.map(session => (
               <div key={session.id} className="relative">
                 <div
-                  onClick={() => router.push(`/chat/${session.id}`)}
+                  onClick={() => openSession(session.id)}
                   className={cn(
                     'group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors text-sm',
                     session.id === currentSessionId

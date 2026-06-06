@@ -20,6 +20,10 @@ interface ProgressPanelProps {
   annotations?: Annotation[]
   onAnnotationAdd?: (a: Annotation) => void
   onAnnotationRemove?: (componentId: string) => void
+  /** On mobile/tablet (< xl) the panel is hidden inline; when true it shows as a
+   *  full-screen sheet. Controlled by AppShell's mobile top-bar button. */
+  mobileSheetOpen?: boolean
+  onCloseMobileSheet?: () => void
 }
 
 export function ProgressPanel({
@@ -31,6 +35,8 @@ export function ProgressPanel({
   annotations = [],
   onAnnotationAdd,
   onAnnotationRemove,
+  mobileSheetOpen = false,
+  onCloseMobileSheet,
 }: ProgressPanelProps) {
   const { isRunning, steps } = usePipelineStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -76,18 +82,9 @@ export function ProgressPanel({
     </button>
   )
 
-  return (
+  const panelInner = (
     <>
-      <aside
-        className="hidden xl:flex flex-col h-full overflow-hidden"
-        style={{
-          width: width ? `${width}px` : '380px',
-          minWidth: '320px',
-          background: 'var(--color-surface)',
-          borderLeft: '1px solid var(--color-border)',
-        }}
-      >
-        {/* Header */}
+      {/* Header */}
         <div
           className="shrink-0 flex items-center gap-2 px-3 py-2.5 border-b"
           style={{ borderColor: 'var(--color-border)' }}
@@ -192,7 +189,52 @@ export function ProgressPanel({
             ) : null}
           </AnimatePresence>
         </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop inline panel (xl+) */}
+      <aside
+        className="hidden xl:flex flex-col h-full overflow-hidden"
+        style={{
+          width: width ? `${width}px` : '380px',
+          minWidth: '320px',
+          background: 'var(--color-surface)',
+          borderLeft: '1px solid var(--color-border)',
+        }}
+      >
+        {panelInner}
       </aside>
+
+      {/* Mobile / tablet full-screen sheet (< xl) — reachable via the mobile top bar */}
+      <AnimatePresence>
+        {mobileSheetOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="xl:hidden fixed inset-0 z-50 flex flex-col"
+            style={{ background: 'var(--color-surface)' }}
+          >
+            <div
+              className="shrink-0 flex items-center justify-end px-2 py-1.5 border-b"
+              style={{ borderColor: 'var(--color-border)' }}
+            >
+              <button
+                onClick={onCloseMobileSheet}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm text-slate-600 hover:bg-slate-100 transition-colors"
+              >
+                <X size={14} /> 关闭
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+              {panelInner}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Fullscreen overlay — shares the same annotationMode state */}
       <AnimatePresence>

@@ -41,6 +41,11 @@ export function AppShell({ sessionId }: { sessionId: string }) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [mobilePanelOpen, setMobilePanelOpen] = useState(false)
 
+  // Bumped whenever annotations are cleared (i.e. after a send) so ProgressPanel
+  // can exit annotation mode — without firing on the empty-annotations state that
+  // exists right after the user first enables the mode.
+  const [annotationResetTick, setAnnotationResetTick] = useState(0)
+
   // ── Restore persisted layout on mount ──────────────────────────────────
   useEffect(() => {
     // Seed session list from cache so sidebar isn't empty during API fetch
@@ -104,6 +109,7 @@ export function AppShell({ sessionId }: { sessionId: string }) {
 
   const handleAnnotationClear = useCallback(() => {
     setAnnotations([])
+    setAnnotationResetTick(t => t + 1)
   }, [])
 
   // ── Draggable divider (pointer capture for reliable drag) ───────────────
@@ -219,6 +225,7 @@ export function AppShell({ sessionId }: { sessionId: string }) {
           onAnnotationRemove={handleAnnotationRemove}
           mobileSheetOpen={mobilePanelOpen}
           onCloseMobileSheet={() => setMobilePanelOpen(false)}
+          resetAnnotationModeTick={annotationResetTick}
         />
       </main>
 

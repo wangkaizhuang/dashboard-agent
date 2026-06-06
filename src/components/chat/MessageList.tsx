@@ -67,7 +67,9 @@ export function MessageList({ messages, isLoading, isNewSession = true, sessionL
             style={{ background: 'var(--color-surface)', border: '1px solid var(--color-border)', color: 'var(--color-text-2)' }}
           >
             <Loader2 size={13} className="animate-spin" />
-            正在生成仪表板...
+            正在生成仪表板…
+            {/* On phones the step-by-step progress lives in the hidden panel — point there. */}
+            <span className="xl:hidden text-xs text-slate-400">（点右上「进度/预览」看步骤）</span>
           </div>
         </div>
       )}

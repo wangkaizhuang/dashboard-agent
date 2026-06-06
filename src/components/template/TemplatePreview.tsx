@@ -318,7 +318,6 @@ export function TemplatePreview({
             className="w-full h-full border-0"
             sandbox="allow-scripts"
             title="Dashboard template preview"
-            loading="lazy"
           />
         </div>
 

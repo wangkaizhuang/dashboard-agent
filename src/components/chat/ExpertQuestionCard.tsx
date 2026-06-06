@@ -111,6 +111,9 @@ export function ExpertQuestionCard({ questionId, question, options, onAnswered, 
         >
           确认提交 <ChevronRight size={14} />
         </button>
+        <p className="text-[11px] text-slate-400 text-center mt-1.5">
+          回答全部问题后，将自动继续生成
+        </p>
       </div>
     </div>
   )

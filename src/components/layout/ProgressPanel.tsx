@@ -24,6 +24,8 @@ interface ProgressPanelProps {
    *  full-screen sheet. Controlled by AppShell's mobile top-bar button. */
   mobileSheetOpen?: boolean
   onCloseMobileSheet?: () => void
+  /** Incremented after a send (annotations cleared) so we exit annotation mode. */
+  resetAnnotationModeTick?: number
 }
 
 export function ProgressPanel({
@@ -37,6 +39,7 @@ export function ProgressPanel({
   onAnnotationRemove,
   mobileSheetOpen = false,
   onCloseMobileSheet,
+  resetAnnotationModeTick,
 }: ProgressPanelProps) {
   const { isRunning, steps } = usePipelineStore()
   const [isFullscreen, setIsFullscreen] = useState(false)
@@ -44,6 +47,11 @@ export function ProgressPanel({
   // Lifted here so both the normal and fullscreen TemplatePreview share the same mode.
   // Entering fullscreen therefore keeps annotation mode active seamlessly.
   const [annotationMode, setAnnotationMode] = useState(false)
+
+  // Exit annotation mode after a send (the tick changes when annotations clear).
+  useEffect(() => {
+    if (resetAnnotationModeTick) setAnnotationMode(false)
+  }, [resetAnnotationModeTick])
 
   // Close the fullscreen overlay on Escape. The overlay is a custom fixed div
   // (not the native Fullscreen API), so the browser won't dismiss it for us —

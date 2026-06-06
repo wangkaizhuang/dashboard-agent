@@ -1,9 +1,10 @@
 import { prisma } from '@/lib/db/prisma'
 import { getOpenAIClient, getModel } from '@/lib/ai/client'
-import { buildCompressedContext } from './context'
+import { buildCompressedContext, sliceToActiveContext } from './context'
 import { runQuickStep, buildStepPrompts } from './modes/quick'
 import { runThinkStep } from './modes/think'
 import { analyzeGaps, waitForExpertAnswers } from './modes/expert'
+import { detectRelated, waitForIntentChoice } from './intent'
 import { SCORING_SYSTEM, SCORING_USER } from './prompts/scoring'
 import { SUMMARY_SYSTEM, SUMMARY_USER } from './prompts/summary'
 import { runPartialUpdate } from './partial-update'
@@ -60,27 +61,71 @@ export async function runPipeline(
     where: { sessionId }, orderBy: { stepIndex: 'asc' }
   })
 
-  const failedStep = cleanedSteps.find(s => s.status === 'FAILED')
-  const startIndex = failedStep ? failedStep.stepIndex : 0
-
   // Prisma returns Date for createdAt; map to string to satisfy our Message type
   const mappedMessages = session.messages.map(m => ({
     ...m,
     createdAt: m.createdAt.toISOString(),
     metadata: m.metadata as Record<string, unknown> | null | undefined,
   }))
+
+  // ── Intent / relatedness gate ──────────────────────────────────────────────
+  // For a follow-up on an existing dashboard, check whether the new request is
+  // unrelated to the current context segment. If so, ask the user to choose
+  // continue vs regenerate (mirrors the expert-question wait). Fails open.
+  const existingTemplate = await prisma.template.findUnique({ where: { sessionId } })
+  const currentMsg = [...mappedMessages].reverse().find(m => m.role === 'USER')
+  let freshThisRun = (currentMsg?.metadata as { contextBoundary?: boolean } | undefined)?.contextBoundary === true
+
+  if (existingTemplate && currentMsg && !freshThisRun) {
+    const priorTurns = sliceToActiveContext(mappedMessages)
+      .filter(m => m.role === 'USER' && m.id !== currentMsg.id)
+    if (priorTurns.length >= 1) {
+      const reqStep = cleanedSteps.find(s => s.stepName === 'REQUIREMENTS_ANALYSIS' && s.status === 'COMPLETED')
+      let topic = ''
+      try { topic = JSON.parse(reqStep?.content || '{}').summary || '' } catch { /* ignore */ }
+      if (!topic) topic = priorTurns[0]?.content || ''
+      const { related, reason } = await detectRelated(topic, userInput)
+      if (!related) {
+        await prisma.message.update({
+          where: { id: currentMsg.id },
+          data: { metadata: { ...(currentMsg.metadata || {}), intentDecision: 'pending' } as never },
+        })
+        send({ type: 'intent_choice', messageId: currentMsg.id, reason })
+        const choice = await waitForIntentChoice(currentMsg.id)
+        if (choice === 'regenerate') {
+          await prisma.message.update({
+            where: { id: currentMsg.id },
+            data: { metadata: { ...(currentMsg.metadata || {}), intentDecision: 'regenerate', contextBoundary: true } as never },
+          })
+          freshThisRun = true
+        }
+      }
+    }
+  }
+
+  const failedStep = cleanedSteps.find(s => s.status === 'FAILED')
+  const startIndex = freshThisRun ? 0 : (failedStep ? failedStep.stepIndex : 0)
+
+  // Scope the model context: a fresh run (boundary on the current message) ignores
+  // all prior history + step outputs; otherwise use the active segment since the
+  // last boundary. Display history is never trimmed.
   const runtimeCfg = getRuntimeConfig()
+  const scopedMessages = freshThisRun
+    ? mappedMessages.filter(m => m.id === currentMsg!.id)
+    : sliceToActiveContext(mappedMessages)
   const contextMessages = await buildCompressedContext(
-    mappedMessages,
+    scopedMessages,
     runtimeCfg.contextMaxTokens,
     runtimeCfg.contextKeepRecent
   )
   const history = contextMessages.map(m => `${m.role}: ${m.content}`).join('\n')
 
   const previousOutputs: Record<string, string> = {}
-  cleanedSteps.filter(s => s.status === 'COMPLETED').forEach(s => {
-    previousOutputs[s.stepName] = s.content
-  })
+  if (!freshThisRun) {
+    cleanedSteps.filter(s => s.status === 'COMPLETED').forEach(s => {
+      previousOutputs[s.stepName] = s.content
+    })
+  }
 
   // Track the TEMPLATE_GENERATION score from this run so the template upsert
   // records the actual score instead of falling back to 75 every time.

@@ -165,6 +165,33 @@ export function ChatPanel({
     setRunning(false)
   }
 
+  // Submit the continue/regenerate choice for an unrelated request. The running
+  // pipeline polls the message metadata and resumes once this lands.
+  const handleIntentChoose = async (messageId: string, choice: 'continue' | 'regenerate') => {
+    await fetch(`/api/sessions/${sessionId}/intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ messageId, choice }),
+    })
+  }
+
+  // Fork a new session from a turn node, then navigate to it.
+  const handleFork = async (fromMessageId: string) => {
+    try {
+      const res = await fetch(`/api/sessions/${sessionId}/fork`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fromMessageId }),
+      })
+      if (!res.ok) { toast.error('分叉失败，请重试'); return }
+      const { id } = await res.json()
+      onSessionCreated()
+      router.push(`/chat/${id}`)
+    } catch {
+      toast.error('分叉失败，请重试')
+    }
+  }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sendMessage = async (content: string, modeOverride?: Mode) => {
     // Use the ref (not state) as the guard — refs are synchronous and not subject
@@ -285,6 +312,19 @@ export function ChatPanel({
               setMessages(prev => [...prev, eqMsg])
             }
 
+            if (event.type === 'intent_choice' && event.messageId) {
+              const icMsg: Message = {
+                id: `intent-${event.messageId}`,
+                sessionId,
+                role: 'ASSISTANT',
+                content: '',
+                type: 'INTENT_CHOICE',
+                metadata: { messageId: event.messageId, reason: event.reason },
+                createdAt: new Date().toISOString(),
+              }
+              setMessages(prev => [...prev, icMsg])
+            }
+
             if (event.type === 'template_summary' && event.summaryText) {
               const summaryMsg: Message = {
                 id: `summary-${Date.now()}`,
@@ -373,6 +413,8 @@ export function ChatPanel({
         sessionLoading={sessionId !== 'new' && !sessionLoaded}
         onTemplatePreview={onTemplateReady}
         onExpertAnswered={loadSession}
+        onFork={handleFork}
+        onIntentChoose={handleIntentChoose}
       />
 
       <ChatInput

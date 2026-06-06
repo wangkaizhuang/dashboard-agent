@@ -2,7 +2,9 @@
 export type Mode = 'QUICK' | 'THINK' | 'EXPERT'
 export type SessionStatus = 'ACTIVE' | 'PAUSED' | 'COMPLETED' | 'FAILED'
 export type MessageRole = 'USER' | 'ASSISTANT' | 'SYSTEM'
-export type MessageType = 'TEXT' | 'TEMPLATE_CARD' | 'EXPERT_QUESTION' | 'SCORE_REPORT'
+// 'INTENT_CHOICE' is a client-only synthetic type (never persisted) for the
+// "unrelated request" continue/regenerate prompt.
+export type MessageType = 'TEXT' | 'TEMPLATE_CARD' | 'EXPERT_QUESTION' | 'SCORE_REPORT' | 'INTENT_CHOICE'
 export type StepStatus = 'PENDING' | 'RUNNING' | 'COMPLETED' | 'FAILED' | 'SKIPPED'
 export type StepName =
   | 'REQUIREMENTS_ANALYSIS'
@@ -93,6 +95,7 @@ export type SSEEventType =
   | 'step_complete'
   | 'step_failed'
   | 'expert_question'
+  | 'intent_choice'       // new request seems unrelated — ask continue vs regenerate
   | 'template_summary'    // AI summary text before template card
   | 'template_ready'
   | 'pipeline_complete'
@@ -112,6 +115,7 @@ export interface SSEEvent {
   summaryText?: string    // used by template_summary
   reason?: string
   message?: string
+  messageId?: string      // used by intent_choice — the user message to decide on
 }
 
 // Step labels for display

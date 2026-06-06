@@ -53,6 +53,23 @@ export async function buildCompressedContext(
   }
 }
 
+/**
+ * Scope messages to the active context segment: everything from the last
+ * context-boundary marker onward (inclusive). A boundary is a message whose
+ * metadata.contextBoundary === true (set when the user chose "regenerate" on an
+ * unrelated request). Display history is never trimmed — this only narrows what
+ * is fed to the model.
+ */
+export function sliceToActiveContext<T extends { metadata?: Record<string, unknown> | null }>(messages: T[]): T[] {
+  let lastBoundary = -1
+  messages.forEach((m, i) => {
+    if ((m.metadata as { contextBoundary?: boolean } | null | undefined)?.contextBoundary === true) {
+      lastBoundary = i
+    }
+  })
+  return lastBoundary >= 0 ? messages.slice(lastBoundary) : messages
+}
+
 export function buildStepContext(completedSteps: Array<{ stepName: string; content: string }>): string {
   if (completedSteps.length === 0) return ''
   return completedSteps

@@ -13,9 +13,11 @@ interface MessageListProps {
   sessionLoading?: boolean
   onTemplatePreview: (templateId: string) => void
   onExpertAnswered: () => void
+  onFork?: (fromMessageId: string) => void
+  onIntentChoose?: (messageId: string, choice: 'continue' | 'regenerate') => Promise<void>
 }
 
-export function MessageList({ messages, isLoading, isNewSession = true, sessionLoading = false, onTemplatePreview, onExpertAnswered }: MessageListProps) {
+export function MessageList({ messages, isLoading, isNewSession = true, sessionLoading = false, onTemplatePreview, onExpertAnswered, onFork, onIntentChoose }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -77,6 +79,8 @@ export function MessageList({ messages, isLoading, isNewSession = true, sessionL
           onExpertAnswered={onExpertAnswered}
           expertIndex={msg.type === 'EXPERT_QUESTION' ? expertOrdinal.get(msg.id) : undefined}
           expertTotal={msg.type === 'EXPERT_QUESTION' ? expertTotal : undefined}
+          onFork={onFork}
+          onIntentChoose={onIntentChoose}
         />
       ))}
 

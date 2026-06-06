@@ -251,17 +251,17 @@ export function TemplatePreview({
           className="shrink-0 flex items-center gap-2 px-3 py-2 border-b"
           style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
         >
-          {/* URL bar */}
+          {/* URL bar — decorative; hidden on mobile where it collapses to an illegible sliver */}
           <div
-            className="flex-1 flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono truncate"
+            className="hidden sm:flex flex-1 items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-mono truncate"
             style={{ background: '#F1F5F9', color: 'var(--color-text-2)' }}
           >
             <div className="w-2 h-2 rounded-full bg-green-400 shrink-0" />
             <span className="truncate">/api/templates/{templateId.slice(0, 8)}…/preview</span>
           </div>
 
-          {/* View mode toggle */}
-          <div className="flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: '#F1F5F9' }}>
+          {/* View mode toggle — hidden on mobile (the phone-frame preview is redundant there) */}
+          <div className="hidden sm:flex items-center gap-0.5 p-0.5 rounded-lg" style={{ background: '#F1F5F9' }}>
             <button
               onClick={() => setViewMode('desktop')}
               className={cn('p-1.5 rounded-md transition-colors', viewMode === 'desktop' ? 'bg-white shadow-sm text-slate-700' : 'text-slate-400 hover:text-slate-600')}

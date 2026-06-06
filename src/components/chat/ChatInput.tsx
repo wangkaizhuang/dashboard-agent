@@ -185,7 +185,7 @@ export function ChatInput({
             </button>
           )
         })}
-        <span className="ml-auto text-xs text-slate-400">
+        <span className="hidden sm:inline ml-auto text-xs text-slate-400">
           Enter 发送 · Shift+Enter 换行
         </span>
       </div>

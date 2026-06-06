@@ -198,7 +198,7 @@ export function Sidebar({
                 <div
                   onClick={() => openSession(session.id)}
                   className={cn(
-                    'group flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer transition-colors text-sm',
+                    'group flex items-center gap-2 px-2 py-2.5 rounded-lg cursor-pointer transition-colors text-sm',
                     session.id === currentSessionId
                       ? 'bg-indigo-600 text-white'
                       : 'text-slate-300 hover:bg-slate-700 hover:text-white'

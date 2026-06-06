@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import { Menu, ListChecks } from 'lucide-react'
 import { usePipelineStore } from '@/store/pipeline'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
@@ -8,12 +9,16 @@ import type { Message, SSEEvent, Mode, Annotation } from '@/types'
 
 interface ChatPanelProps {
   sessionId: string
-  onTemplateReady: (templateId: string) => void
+  onTemplateReady: (templateId: string, autoOpen?: boolean) => void
   onSessionTitleChange: () => void
   onSessionCreated: () => void
   annotations?: Annotation[]
   onAnnotationRemove?: (componentId: string) => void
   onAnnotationClear?: () => void
+  /** Mobile-only (< md): open the off-canvas sidebar. */
+  onOpenSidebar?: () => void
+  /** Below xl: open the progress/preview sheet. */
+  onOpenPanel?: () => void
 }
 
 export function ChatPanel({
@@ -24,6 +29,8 @@ export function ChatPanel({
   annotations = [],
   onAnnotationRemove,
   onAnnotationClear,
+  onOpenSidebar,
+  onOpenPanel,
 }: ChatPanelProps) {
   const router = useRouter()
   const [messages, setMessages] = useState<Message[]>([])
@@ -79,7 +86,9 @@ export function ChatPanel({
         })
         // Notify parent so the right panel restores its Preview state (e.g. on page reload
         // or session switch) even though no SSE template_ready event fires in this path.
-        onTemplateReadyRef.current(session.template.id)
+        // autoOpen=false: loading an existing session must NOT auto-pop the mobile sheet
+        // over the chat history.
+        onTemplateReadyRef.current(session.template.id, false)
       }
     } catch (err) {
       console.error('Failed to load session:', err)
@@ -274,7 +283,7 @@ export function ChatPanel({
             }
 
             if (event.type === 'template_ready' && event.templateId) {
-              onTemplateReady(event.templateId)
+              onTemplateReady(event.templateId, true)  // fresh generation — auto-surface on mobile
             }
             if (event.type === 'pipeline_complete') {
               stopLoading()
@@ -309,14 +318,34 @@ export function ChatPanel({
     >
       {/* Header */}
       <div
-        className="shrink-0 px-4 py-3 border-b flex items-center"
+        className="shrink-0 px-3 py-2.5 border-b flex items-center gap-1"
         style={{ borderColor: 'var(--color-border)', background: 'var(--color-surface)' }}
       >
+        {/* Hamburger — opens the off-canvas sidebar on mobile (< md) */}
+        {onOpenSidebar && (
+          <button
+            onClick={onOpenSidebar}
+            className="md:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 transition-colors"
+            style={{ color: 'var(--color-text-1)' }}
+            aria-label="打开菜单"
+          >
+            <Menu size={18} />
+          </button>
+        )}
         <span className="text-sm font-semibold" style={{ color: 'var(--color-text-1)' }}>
           对话
         </span>
         {isLoading && (
           <span className="ml-2 text-xs text-indigo-500 animate-pulse">生成中…</span>
+        )}
+        {/* Progress/preview — reachable below xl (where the inline panel is hidden) */}
+        {onOpenPanel && (
+          <button
+            onClick={onOpenPanel}
+            className="xl:hidden ml-auto flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-medium text-indigo-600 hover:bg-indigo-50 transition-colors"
+          >
+            <ListChecks size={13} /> 进度/预览
+          </button>
         )}
       </div>
 

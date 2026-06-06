@@ -59,12 +59,24 @@ export function ChatPanel({
   // so events from a previous pipeline don't bleed into a newly-loaded session.
   const sseAbortRef = useRef<AbortController | null>(null)
 
+  // Monotonic load id — only the latest loadSession() may write state, so a
+  // superseded load (rapid session switching) can't blank/stale the chat.
+  const loadGenRef = useRef(0)
+
   const loadSession = useCallback(async () => {
     if (sessionId === 'new') return
+    const myGen = ++loadGenRef.current
+    const isStale = () => myGen !== loadGenRef.current
     try {
-      const res = await fetch(`/api/sessions/${sessionId}`)
-      if (!res.ok) return
+      // Fetch with one retry — a transient failure must not leave the chat blank.
+      let res = await fetch(`/api/sessions/${sessionId}`)
+      if (!res.ok && !isStale()) {
+        await new Promise(r => setTimeout(r, 500))
+        res = await fetch(`/api/sessions/${sessionId}`)
+      }
+      if (!res.ok || isStale()) return
       const session = await res.json()
+      if (isStale()) return  // a newer session load started while we awaited — don't write stale data
       setMessages(session.messages || [])
       // Update browser tab title with the session title
       if (session.title) document.title = `${session.title} — Dashboard Agent`
@@ -96,7 +108,9 @@ export function ChatPanel({
     } finally {
       // Mark the initial fetch as resolved (success or failure) so the empty-state
       // stops showing the loading indicator / never shows the new-session CTA.
-      setSessionLoaded(true)
+      // Only the latest load may flip this, so a superseded load can't end the
+      // newer session's loading state early.
+      if (myGen === loadGenRef.current) setSessionLoaded(true)
     }
   }, [sessionId])
 

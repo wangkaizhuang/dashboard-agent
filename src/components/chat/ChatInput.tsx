@@ -60,7 +60,14 @@ export function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const handleSend = () => {
-    const content = value.trim()
+    let content = value.trim()
+    // Annotation-only send: the pinned annotations already carry the instruction,
+    // so an empty textarea is valid. Synthesize a readable message from them.
+    if (!content && annotations.length > 0) {
+      content = '按注释调整：' + annotations
+        .map(a => a.componentLabel + (a.note ? `（${a.note}）` : ''))
+        .join('、')
+    }
     if (!content || disabled) return
     // Soft validation: first-time messages (no annotations) that are extremely
     // short are almost certainly not real dashboard requests.
@@ -121,10 +128,10 @@ export function ChatInput({
         />
         <button
           onClick={handleSend}
-          disabled={disabled || !value.trim()}
+          disabled={disabled || (!value.trim() && annotations.length === 0)}
           className={cn(
             'shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-colors',
-            disabled || !value.trim()
+            disabled || (!value.trim() && annotations.length === 0)
               ? 'text-slate-300 cursor-not-allowed'
               : 'bg-indigo-600 text-white hover:bg-indigo-700'
           )}

@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Menu, ListChecks } from 'lucide-react'
+import { toast } from 'sonner'
 import { usePipelineStore } from '@/store/pipeline'
 import { MessageList } from '@/components/chat/MessageList'
 import { ChatInput } from '@/components/chat/ChatInput'
@@ -306,6 +307,8 @@ export function ChatPanel({
       // AbortError means the user navigated away — silently stop without UI updates
       if ((err as Error).name === 'AbortError') return
       console.error('Pipeline error:', err)
+      // Surface the failure to the user instead of failing silently.
+      toast.error('生成失败，请重试或检查网络/配置')
       stopLoading()
       await loadSession()
     }

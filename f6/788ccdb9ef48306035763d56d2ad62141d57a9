@@ -1,0 +1,51 @@
+src/__tests__/context-scope.test.ts
+  s_12d312efdd9329::t_89cd97f78a4818 1-33
+src/app/api/sessions/[id]/intent/route.ts
+  s_12d312efdd9329::t_9dc64496839f5b 1-28
+src/lib/ai/prompts/fork-title.ts
+  s_12d312efdd9329::t_d9c669098043c2 1-8
+src/types/index.ts
+  s_12d312efdd9329::t_36125fadc7d82e 5-7
+  s_12d312efdd9329::t_2c9dee3f965a0d 98,118
+src/components/chat/IntentChoiceCard.tsx
+  s_12d312efdd9329::t_126c6750ffa5ab 1-73
+src/lib/ai/pipeline.ts
+  s_12d312efdd9329::t_f950606c58498c 70-111,113-115,117,124-128
+  s_12d312efdd9329::t_36b6a7706df30e 3,7
+src/components/layout/ChatPanel.tsx
+  s_12d312efdd9329::t_1a5d8991c64125 315-327
+  s_12d312efdd9329::t_2d7c79d4ae6277 416-417
+  s_12d312efdd9329::t_a898bc418a166d 168-194
+CHANGELOG.md
+  s_12d312efdd9329::t_e68ab45a604ed7 5-14
+src/lib/ai/prompts/intent-detection.ts
+  s_12d312efdd9329::t_970d8190e7e2f7 1-17
+src/components/chat/MessageItem.tsx
+  s_12d312efdd9329::t_029787ca5821a6 55-56,59-68,70-78
+  s_12d312efdd9329::t_cca1f78a511b0d 2,6,17-20,23
+src/app/api/sessions/[id]/fork/route.ts
+  s_12d312efdd9329::t_19f9d437ecf432 1-110
+src/lib/ai/intent.ts
+  s_12d312efdd9329::t_0905cf85d8a7bc 1-47
+src/components/chat/MessageList.tsx
+  s_12d312efdd9329::t_2452dbe40a62c0 82-83
+  s_12d312efdd9329::t_bbeedac0a2f7e9 16-17,20
+src/lib/ai/context.ts
+  s_12d312efdd9329::t_5b6287c23af8b5 56-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.3",
+  "base_commit_sha": "f6788ccdb9ef48306035763d56d2ad62141d57a9",
+  "prompts": {},
+  "sessions": {
+    "s_12d312efdd9329": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4e82d01e-371f-4590-9b10-41abb68b8f0f",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}

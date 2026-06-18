@@ -1,0 +1,19 @@
+ecosystem.config.cjs
+  s_4ba341f1efa929::t_f08f9fde431173 10-15,17,19,21-22,24,26,28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.8",
+  "base_commit_sha": "4e9bdd51438b11f7ac052dda34b48422581f6ade",
+  "prompts": {},
+  "sessions": {
+    "s_4ba341f1efa929": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fd780ece-bfa3-4379-9ca2-96443f5dfde7",
+        "model": "claude-opus-4-8"
+      },
+      "human_author": "Kevin.King-王凯壮 <Kevin.King@fanruan.com>"
+    }
+  }
+}
